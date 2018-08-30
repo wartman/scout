@@ -1,0 +1,7 @@
+-cp src
+-cp test
+
+-main Run
+
+-php dst/test/php
+# -js dst/test.js

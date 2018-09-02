@@ -1,5 +1,4 @@
 import haxe.unit.TestCase;
-
 import scout.Template.html;
 
 class TemplateTest extends TestCase {

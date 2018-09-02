@@ -3,5 +3,10 @@
 
 -main Run
 
+--each
+
+-js dst/test.js
+
+--next
+
 -php dst/test/php
-# -js dst/test.js

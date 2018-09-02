@@ -95,10 +95,10 @@ class ModelBuilder {
     });
 
     newFields.push({
-      name: '__scout_change',
-      access: [ APrivate ],
+      name: 'onChange',
+      access: [ APublic ],
       kind: FVar( TPath({
-        pack: [ 'scout', 'core' ],
+        pack: [ 'scout' ],
         name: 'Signal',
         params: [ TPType(TPath({
           pack: c.pack,
@@ -108,35 +108,26 @@ class ModelBuilder {
       pos: Context.currentPos()
     });
 
-    newFields.push({
-      name: 'new',
-      access: [ APublic ],
-      kind: FFun({
-        ret: ( macro:Void ),
-        args: [ { name: 'props', type: TAnonymous(props) } ],
-        expr: macro {
-          this.props = props;
-          this.signals = cast {};
-          $b{ signals.map(function (field) {
-            var name = field.name;
-            return macro this.signals.$name = new scout.Signal();
-          }) };
-          $b{ defaults };
-        }
-      }),
-      pos: Context.currentPos()
-    });
+    var propType = TAnonymous(props);
+    var localType = TPath({ pack: c.pack, name: c.name });
 
-    newFields.push({
-      name: 'subscribe',
-      access: [ APublic, AInline ],
-      kind: FFun({
-        ret: (macro:Void),
-        args: [ { name: 'listener', type: TFunction([ TPath({ pack: c.pack, name: c.name }) ], (macro:Void) ) } ],
-        expr: macro this.__scout_change.add(listener)
-      }),
-      pos: Context.currentPos()
-    });
+    newFields = newFields.concat((macro class {
+
+      public function new(props:$propType) {
+        this.props = props;
+        this.signals = cast {};
+        $b{ signals.map(function (field) {
+          var name = field.name;
+          return macro this.signals.$name = new scout.Signal();
+        }) };
+        $b{ defaults };
+      }
+
+      public function subscribe(listener:scout.Model->Void):scout.Signal.SignalSlot<Model> {
+        return cast this.onChange.add(listener);
+      }
+
+    }).fields);
 
     fields = fields.concat(newFields);
     return fields;
@@ -184,7 +175,7 @@ class ModelBuilder {
         if (p.name.indexOf('Collection') >= 0) {
           watch.push(macro this.props.$name.subscribe(function (c) {
             this.signals.$name.dispatch(c);
-            this.__scout_change.dispatch(this);
+            this.onChange.dispatch(this);
           }));
         }
       default:
@@ -196,8 +187,11 @@ class ModelBuilder {
         ret: t,
         args: [ { name: 'value', type: t } ],
         expr: macro {
+          if (this.props.$name == value) {
+            return value;
+          }
           this.props.$name = value;
-          this.__scout_change.dispatch(this);
+          this.onChange.dispatch(this);
           this.signals.$name.dispatch(value);
           $b{watch};
           return value;

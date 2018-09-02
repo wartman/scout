@@ -28,6 +28,14 @@ class Dom {
     }
   }
 
+  public static inline function select(sel:String){
+    return js.Browser.document.querySelector(sel);
+  }
+
+  public static inline function selectAll(sel:String){
+    return js.Browser.document.querySelectorAll(sel);
+  }
+
   public static function closest(el:Element, selector:String):Element {
     while (el != null && el.nodeType != docNodeType) {
       if (el.matches(selector)) return el;

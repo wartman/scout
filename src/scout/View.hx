@@ -17,6 +17,8 @@ package scout;
 #end
 class View {
 
+  private static var autoIdIndex:Int = 0;
+
   #if js
     @:isVar public var el(default, set):Element;
     public function set_el(el:Element) {
@@ -46,16 +48,31 @@ class View {
     #end
   }
 
+  public var cid(default, null):String = 'view' + autoIdIndex++;
   public var beforeRender(default, null):Signal<View> = new Signal();
   public var afterRender(default, null):Signal<View> = new Signal();
   public var onReady(default, null):Signal<View> = new Signal();
   public var onRemove(default, null):Signal<View> = new Signal();
   public var children(default, null):ViewCollection;
 
-  public function template():String return '';
+  public function template() return Template.html('${children}');
   
-  public function add(view:View) {
-    children.add(view);
+  public function addView(view:View, ?options:{ 
+    ?silent:Bool,
+    ?replace:Bool,
+    ?at:Int 
+  }) {
+    children.add(view, options);
+    return this;
+  }
+
+  public function addViews(views:Array<View>) {
+    for (view in views) addView(view);
+    return this;
+  }
+
+  public function removeView(view:View) {
+    children.remove(view);
     return this;
   }
 

@@ -17,15 +17,15 @@ abstract SignalSlot<T>({ listener:T->Void, signal:Signal<T>, once:Bool }) {
 
 }
 
-abstract Signal<T>(Array<SignalSlot<T>>) {
+abstract Signal<T>({ slots: Array<SignalSlot<T>> }) {
 
   public inline function new() {
-    this = [];
+    this = { slots: [] };
   }
 
   public function add(listener:T->Void, once:Bool = false):SignalSlot<T> {
     var slot = new SignalSlot(listener, cast this, once);
-    this.push(slot);
+    this.slots.push(slot);
     return slot;
   }
 
@@ -34,11 +34,11 @@ abstract Signal<T>(Array<SignalSlot<T>>) {
   }
 
   public inline function remove(listener:T->Void) {
-    this = this.filter(function (slot) return slot.listener != listener);
+    this.slots = this.slots.filter(function (slot) return slot.listener != listener);
   }
 
   public function dispatch(data:T) {
-    for (slot in this) {
+    for (slot in this.slots) {
       slot.listener(data);
       if (slot.once) slot.remove();
     }

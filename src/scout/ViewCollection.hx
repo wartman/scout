@@ -3,8 +3,11 @@ package scout;
 #if js
   import js.html.Element;
 #end
+import scout.Template;
 
-class ViewCollection {
+using Lambda;
+
+class ViewCollection implements Renderable {
 
   private static var ids:Int = 0;
 
@@ -14,14 +17,21 @@ class ViewCollection {
   public var rendered:Bool = false;
   public var attached:Bool = false;
   private var views:Array<View> = [];
+  public var length(get, never):Int;
+  public function get_length():Int return views.length;
   private var onReady:Signal<ViewCollection> = new Signal();
 
   #if sys
     public var content(default, null):String = '';
   #end
 
-  public function new(view:View) {
+  public function new(view:View, ?initViews:Array<View>) {
     this.view = view;
+    if (initViews != null) {
+      for (view in initViews) {
+        add(view);
+      }
+    }
 
     #if js
       this.view.onRemove.add(function (_) removeAll());
@@ -30,23 +40,35 @@ class ViewCollection {
     #end
   }
 
-  public function add(view:View, ?options:{ ?silent:Bool, ?replace:Bool }) {
+  public function add(view:View, ?options:{ 
+    ?silent:Bool, 
+    ?replace:Bool,
+    ?at:Int 
+  }) {
     if (options == null) {
       options = { silent: false, replace: false };
     }
 
-    views.push(view);
+    if (options.replace) {
+      for (v in views) {
+        remove(v, { silent: options.silent });
+      }
+      views = [];
+    }
+
+    if (options.at != null) {
+      views.insert(options.at, view);
+    } else {
+      views.push(view);
+    }
     view.children.parent = this;
     
     #if js
       if (!options.silent) {
-        attach([ view ], {
-          ready: inDom(),
-          replace: options.replace
-        });
+        attach([ view ], { ready: inDom() });
       }
     #end
-    
+
     return this;
   }
 
@@ -55,8 +77,7 @@ class ViewCollection {
       options = { silent: false };
     }
 
-    var index = views.indexOf(view);
-    if (index > -1) views = views.splice(index, 1);
+    views.remove(view);
 
     #if js
       if (!options.silent) {
@@ -67,12 +88,41 @@ class ViewCollection {
     return this;
   }
 
+  public function find(elt:View->Bool):Null<View> {
+    return Lambda.find(views, elt);
+  }
+
+  public function has(elt:View->Bool):Bool {
+    return Lambda.exists(views, elt);
+  }
+
+  public function exists(view:View):Bool {
+    return Lambda.has(views, view);
+  }
+
+  public function iterator():Iterator<View> {
+    return views.iterator();
+  }
+
+  public function mount(tag:String):RenderResult {
+    #if sys
+      render();
+      return Template.html('<${tag} id="${cid}">${content}</${tag}>');
+    #else
+      return Template.html('<${tag} id="${cid}"></${tag}>');
+    #end
+  }
+
+  public function toRenderResult():RenderResult {
+    return mount('div');
+  }
+
   #if js
 
     public function render() {
       attach(views, {
         ready: inDom(),
-        replace: true
+        reset: true
       });
       rendered = true;
       return this;
@@ -97,18 +147,33 @@ class ViewCollection {
       return this;
     }
 
-    public function replace(els:Array<Element>) {
-      var el = view.el.querySelector('#' + cid);
-      el.innerHTML = '';
-      for (e in els) {
-        el.appendChild(e);
-      }
-    }
+    private function attach(views:Array<View>, options:{
+      ready:Bool,
+      ?reset:Bool
+    }) {
+      var el = getEl();
+      if (el == null) return;
+      if (options.reset == null) options.reset = false;
 
-    public function append(els:Array<Element>) {
-      var el = view.el.querySelector('#' + cid);
-      for (e in els) {
-        el.appendChild(e);
+      var managers = views.map(function (v) return v.children);
+      for (manager in managers) if (!manager.rendered) {
+        manager.view.render();
+        manager.rendered = true;
+      }
+
+      if (options.reset) {
+        el.innerHTML = '';
+      }
+
+      for (view in views) {
+        el.appendChild(view.el);
+      }
+
+      for (manager in managers) {
+        manager.attached = true;
+        if (options.ready) {
+          manager.ready();
+        }
       }
     }
 
@@ -127,34 +192,6 @@ class ViewCollection {
       }
     }
 
-    private function attach(views:Array<View>, options:{
-      replace:Bool,
-      ready:Bool
-    }) {
-      var el = getEl();
-      if (el == null) return;
-
-      var managers = views.map(function (v) return v.children);
-      for (manager in managers) if (!manager.rendered) {
-        manager.view.render();
-        manager.rendered = true;
-      }
-
-      var els = views.map(function (v) return v.el);
-      if (options.replace) {
-        this.replace(els);
-      } else {
-        this.append(els);
-      }
-
-      for (manager in managers) {
-        manager.attached = true;
-        if (options.ready) {
-          manager.ready();
-        }
-      }
-    }
-
     private function getEl() {
       return view.el.querySelector('#' + cid);
     }
@@ -168,10 +205,6 @@ class ViewCollection {
         node = node.parentElement;
       }
       return false;
-    }
-
-    public function toRenderResult() {
-      return Template.html('<div id="${cid}"></div>');
     }
 
   #else
@@ -203,11 +236,6 @@ class ViewCollection {
         //   manager.ready();
         // }
       }
-    }
-
-    public function toRenderResult() {
-      render();
-      return Template.html('<div id="${cid}">${ @:safe content }</div>');
     }
 
   #end

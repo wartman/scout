@@ -57,7 +57,7 @@ class Main {
     });
 
     #if js
-      Dom.select('#Root', view.render().el);
+      Dom.select('#Root').appendChild(view.render().el);
     #else
       // Something like this:
       Sys.print('<div id="Root"$>{ view.render().content }</div>');

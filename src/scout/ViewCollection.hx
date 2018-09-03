@@ -107,7 +107,7 @@ class ViewCollection implements Renderable {
   public function mount(tag:String):RenderResult {
     #if sys
       render();
-      return Template.html('<${tag} id="${cid}">${content}</${tag}>');
+      return Template.html('<${tag} id="${cid}">${ @:safe content }</${tag}>');
     #else
       return Template.html('<${tag} id="${cid}"></${tag}>');
     #end

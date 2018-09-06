@@ -20,7 +20,20 @@ class ModelBuilder {
       switch (f.kind) {
         case FVar(t, e):
           if (f.meta.exists(function (entry) return entry.name == ':property' || entry.name == ':prop')) {
-            props.push(makeRealProp(f.name, t, f.pos, f.meta.exists(function (entry) return entry.name == ':optional') || e != null));
+            var propIsOptional = f.meta.exists(function (entry) return entry.name == ':optional') || e != null;
+            if (f.meta.exists(function (entry) return entry.name == ':autoIncrement')) {
+              propIsOptional = true;
+              if (!newFields.exists(function (f) return f.name == '__scout_ids')) {
+                newFields.push({
+                  name: '__scout_ids',
+                  access: [ APrivate, AStatic ],
+                  kind: FVar(macro:Int, macro 0),
+                  pos: Context.currentPos()
+                });
+              }
+              e = macro __scout_ids++;
+            }
+            props.push(makeRealProp(f.name, t, f.pos, propIsOptional));
             newFields.push(makeProp(f.name, t, f.pos));
             newFields.push(makeGetter(f.name, t, f.pos));
             newFields.push(makeSetter(f.name, t, f.pos));
@@ -54,7 +67,6 @@ class ModelBuilder {
             });
             signals.push(makeSignal(f.name, t, f.pos));
             defaults.push(macro this.$initializer());
-
             watch.foreach(function (f) {
               switch (f.expr) {
                 case EConst(c): switch (c) {

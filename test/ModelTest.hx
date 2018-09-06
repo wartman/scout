@@ -68,4 +68,31 @@ class ModelTest extends TestCase {
     assertEquals(3, valueChanged);
   }
 
+  public function testComputed() {
+    var computed = new ComputedModel({
+      foo: 'foo',
+      bar: 'bar'
+    });
+    var fooBarChanged = 0;
+    computed.signals.fooBar.add(function (_) fooBarChanged++);
+
+    assertEquals('foobar', computed.fooBar);
+    computed.foo = 'changed';
+    assertEquals(1, fooBarChanged);
+    assertEquals('changedbar', computed.fooBar);
+    computed.bar = 'changed';
+    assertEquals(2, fooBarChanged);
+    assertEquals('changedchanged', computed.fooBar);
+  }
+
+  public function testAutoIncrement() {
+    var start = @:privateAccess ComputedModel.__scout_ids;
+    var one = new ComputedModel({ foo:'foo', bar: 'bar' });
+    var two = new ComputedModel({ foo:'foo', bar: 'bar' });
+
+    assertTrue(one.id != two.id);
+    assertEquals(start, one.id);
+    assertEquals(start + 1, two.id);
+  }
+
 }

@@ -1,6 +1,7 @@
 package scout.macro;
 
 import haxe.macro.Expr;
+import haxe.macro.Type.ClassType;
 import haxe.macro.Context;
 
 using Lambda;
@@ -9,14 +10,32 @@ using haxe.macro.Tools;
 class ModelBuilder {
 
   public static function build() {
-    var c = Context.getLocalClass().get();
-    var fields:Array<Field> = Context.getBuildFields();
-    var newFields:Array<Field> = [];
-    var props:Array<Field> = [];
-    var signals:Array<Field> = [];
-    var defaults:Array<Expr> = [];
+    return new ModelBuilder(
+      Context.getLocalClass().get(),
+      Context.getBuildFields()
+    ).export();
+  }
 
-    fields = fields.filter(function (f) {
+  private var c:ClassType;
+  private var fields:Array<Field>;
+  private var newFields:Array<Field> = [];
+  private var props:Array<Field> = [];
+  private var signals:Array<Field> = [];
+  private var defaults:Array<Expr> = [];
+
+  public function new(c:ClassType, fields:Array<Field>) {
+    this.c = c;
+    this.fields = fields;
+  }
+
+  public function export():Array<Field> {
+    var out = filterFieldsAndExtractProps();
+    addImplFields();
+    return out.concat(newFields);
+  }
+
+  private function filterFieldsAndExtractProps():Array<Field> {
+    return fields.filter(function (f) {
       switch (f.kind) {
         case FVar(t, e):
           if (f.meta.exists(function (entry) return entry.name == ':property' || entry.name == ':prop')) {
@@ -91,41 +110,20 @@ class ModelBuilder {
         default: return true;
       }
     });
+  }
 
-    newFields.push({
-      name: 'props',
-      access: [ APrivate ],
-      kind: FVar( TAnonymous(props), null ),
-      pos: Context.currentPos()
-    });
-
-    newFields.push({
-      name: 'signals',
-      access: [ APublic ],
-      kind: FVar( TAnonymous(signals) ),
-      pos: Context.currentPos()
-    });
-
-    newFields.push({
-      name: 'onChange',
-      access: [ APublic ],
-      kind: FVar( TPath({
-        pack: [ 'scout' ],
-        name: 'Signal',
-        params: [ TPType(TPath({
-          pack: c.pack,
-          name: c.name
-        })) ]
-      }), macro new scout.Signal() ),
-      pos: Context.currentPos()
-    });
-
-    var propType = TAnonymous(props);
+  private function addImplFields() {
+    var propsType = TAnonymous(props);
+    var signalsType = TAnonymous(signals);
     var localType = TPath({ pack: c.pack, name: c.name });
 
     newFields = newFields.concat((macro class {
 
-      public function new(props:$propType) {
+      public var props(default, null):$propsType;
+      public var signals(default, null):$signalsType;
+      public var onChange(default, null):scout.Signal<$localType> = new scout.Signal();
+
+      public function new(props:$propsType) {
         this.props = props;
         this.signals = cast {};
         $b{ signals.map(function (field) {
@@ -140,12 +138,9 @@ class ModelBuilder {
       }
 
     }).fields);
-
-    fields = fields.concat(newFields);
-    return fields;
   }
 
-  private static function makeProp(name:String, t:ComplexType, pos:Position, hasSetter:Bool = true):Field {
+  private function makeProp(name:String, t:ComplexType, pos:Position, hasSetter:Bool = true):Field {
     return {
       name: name,
       kind: FProp('get', hasSetter ? 'set' : 'never', t, null),
@@ -154,7 +149,7 @@ class ModelBuilder {
     };
   }
 
-  private static function makeRealProp(name:String, type:ComplexType, pos:Position, isOptional:Bool):Field {
+  private function makeRealProp(name:String, type:ComplexType, pos:Position, isOptional:Bool):Field {
     return {
       name: name,
       kind: FVar(type, null),
@@ -164,7 +159,7 @@ class ModelBuilder {
     };
   }
 
-  private static function makeGetter(name:String, ret:ComplexType, pos:Position):Field {
+  private function makeGetter(name:String, ret:ComplexType, pos:Position):Field {
     return {
       name: 'get_${name}',
       kind: FFun({
@@ -178,7 +173,7 @@ class ModelBuilder {
     };
   }
 
-  private static function makeSetter(name:String, t:ComplexType, pos:Position):Field {
+  private function makeSetter(name:String, t:ComplexType, pos:Position):Field {
     var watch:Array<Expr> = [];
 
     switch (t) {
@@ -215,7 +210,7 @@ class ModelBuilder {
     };
   }
 
-  private static function makeSignal(name:String, type:ComplexType, pos:Position):Field {
+  private function makeSignal(name:String, type:ComplexType, pos:Position):Field {
     return {
       name: name,
       kind: FVar( TPath({

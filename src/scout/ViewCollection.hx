@@ -7,6 +7,12 @@ import scout.Template;
 
 using Lambda;
 
+typedef ViewAddingOptions = { 
+  ?silent:Bool,
+  ?replace:Bool,
+  ?at:Int 
+};
+
 class ViewCollection implements Renderable {
 
   private static var ids:Int = 0;
@@ -40,11 +46,7 @@ class ViewCollection implements Renderable {
     #end
   }
 
-  public function add(view:View, ?options:{ 
-    ?silent:Bool, 
-    ?replace:Bool,
-    ?at:Int 
-  }) {
+  public function add(view:View, ?options:ViewAddingOptions) {
     if (options == null) {
       options = { silent: false, replace: false };
     }

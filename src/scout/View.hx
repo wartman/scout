@@ -57,17 +57,13 @@ class View {
 
   public function template() return Template.html('${children}');
   
-  public function addView(view:View, ?options:{ 
-    ?silent:Bool,
-    ?replace:Bool,
-    ?at:Int 
-  }) {
+  public function addView(view:View, ?options:ViewCollection.ViewAddingOptions) {
     children.add(view, options);
     return this;
   }
 
-  public function addViews(views:Array<View>) {
-    for (view in views) addView(view);
+  public function addViews(views:Array<View>, ?options:ViewCollection.ViewAddingOptions) {
+    for (view in views) addView(view, options);
     return this;
   }
 

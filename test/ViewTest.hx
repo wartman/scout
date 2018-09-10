@@ -68,6 +68,12 @@ class ViewTest extends TestCase {
     );
   }
 
+  public function testEventBinding() {
+    var view = new WithJsEventView({});
+    // should compile for all targets is all :V
+    assertTrue(true);
+  }
+
   #if js
 
     public function testReal() {

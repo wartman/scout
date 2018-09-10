@@ -76,7 +76,11 @@ class ViewBuilder {
             initializers.push(macro this.$name() );
           }
 
-          if (f.meta.exists(function (m) return m.name == ':on') && isJs) {
+          if (f.meta.exists(function (m) return m.name == ':on')) {
+            if (!isJs) {
+              return false;
+            }
+            
             var metas = f.meta.filter(function (m) return m.name == ':on');
             for (meta in metas) {
               var type = meta.params[0];

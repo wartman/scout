@@ -21,7 +21,7 @@ class ModelBuilder {
   private var newFields:Array<Field> = [];
   private var props:Array<Field> = [];
   private var signals:Array<Field> = [];
-  private var defaults:Array<Expr> = [];
+  private var initializers:Array<Expr> = [];
 
   public function new(c:ClassType, fields:Array<Field>) {
     this.c = c;
@@ -40,6 +40,7 @@ class ModelBuilder {
         case FVar(t, e):
           if (f.meta.exists(function (entry) return entry.name == ':property' || entry.name == ':prop')) {
             var propIsOptional = f.meta.exists(function (entry) return entry.name == ':optional') || e != null;
+
             if (f.meta.exists(function (entry) return entry.name == ':autoIncrement')) {
               propIsOptional = true;
               if (!newFields.exists(function (f) return f.name == '__scout_ids')) {
@@ -52,6 +53,7 @@ class ModelBuilder {
               }
               e = macro __scout_ids++;
             }
+            
             props.push(makeRealProp(f.name, t, f.pos, propIsOptional));
             newFields.push(makeProp(f.name, t, f.pos));
             newFields.push(makeGetter(f.name, t, f.pos));
@@ -60,7 +62,7 @@ class ModelBuilder {
 
             if (e != null) {
               var propName = f.name;
-              defaults.push(macro if (this.props.$propName == null) this.$propName = ${e});
+              initializers.push(macro if (this.props.$propName == null) this.$propName = ${e});
             }
 
             return false;
@@ -85,12 +87,12 @@ class ModelBuilder {
               pos: Context.currentPos()
             });
             signals.push(makeSignal(f.name, t, f.pos));
-            defaults.push(macro this.$initializer());
+            initializers.push(macro this.$initializer());
             watch.foreach(function (f) {
               switch (f.expr) {
                 case EConst(c): switch (c) {
                   case CString(s) | CIdent(s):
-                    defaults.push(macro this.signals.$s.add(function (_) {
+                    initializers.push(macro this.signals.$s.add(function (_) {
                       this.$initializer();
                       this.signals.$fieldName.dispatch(this.$fieldName);
                     }));
@@ -107,6 +109,33 @@ class ModelBuilder {
           }
 
           return true;
+
+        case FFun(func):
+          var name = f.name;
+          
+          if (f.meta.exists(function (m) return m.name == ':observe')) {
+            var metas = f.meta.filter(function (m) return m.name == ':observe');
+            for (meta in metas) {
+              var expr = meta.params[0];
+              f.meta.remove(meta);
+              initializers.push(macro @:pos(f.pos) ${expr}.add(this.$name));
+            }
+          }
+          
+          if (f.meta.exists(function (m) return m.name == ':transition')) {
+            var expr = func.expr;
+            func.expr = macro {
+              silent = true;
+              ${expr};
+              silent = false;
+              // todo: maybe track changes and only fire `onChange` if they
+              // are greater than 0?
+              onChange.dispatch(this);
+            };
+          }
+
+          return true;
+
         default: return true;
       }
     });
@@ -122,6 +151,7 @@ class ModelBuilder {
       public var props(default, null):$propsType;
       public var signals(default, null):$signalsType;
       public var onChange(default, null):scout.Signal<$localType> = new scout.Signal();
+      private var silent:Bool = false;
 
       public function new(props:$propsType) {
         this.props = props;
@@ -130,7 +160,7 @@ class ModelBuilder {
           var name = field.name;
           return macro this.signals.$name = new scout.Signal();
         }) };
-        $b{ defaults };
+        $b{ initializers };
       }
 
       public function subscribe(listener:scout.Model->Void):scout.Signal.SignalSlot<Model> {
@@ -182,7 +212,9 @@ class ModelBuilder {
         if (p.name.indexOf('Collection') >= 0) {
           watch.push(macro this.props.$name.subscribe(function (c) {
             this.signals.$name.dispatch(c);
-            this.onChange.dispatch(this);
+            if (!silent) {
+              this.onChange.dispatch(this);
+            }
           }));
         }
       default:
@@ -198,8 +230,10 @@ class ModelBuilder {
             return value;
           }
           this.props.$name = value;
-          this.onChange.dispatch(this);
           this.signals.$name.dispatch(value);
+          if (!silent) {
+            this.onChange.dispatch(this);
+          }
           $b{watch};
           return value;
         }

@@ -20,7 +20,7 @@ class WithCollectionView extends View {
     }
   }
 
-  @:onSignal(collection.onAdd)
+  @:observe(collection.onAdd)
   public function addViewForModel(model:SimpleModel) {
     addView(new SimpleModelView({
       model: model,
@@ -28,7 +28,7 @@ class WithCollectionView extends View {
     }));
   }
 
-  @:onSignal(collection.onRemove)
+  @:observe(collection.onRemove)
   public function removeViewForModel(model:SimpleModel) {
     for (view in children) {
       if (cast(view, SimpleModelView).model == model) {

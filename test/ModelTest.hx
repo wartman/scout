@@ -95,4 +95,34 @@ class ModelTest extends TestCase {
     assertEquals(start + 1, two.id);
   }
 
+  public function testReactiveModel() {
+    var model = new ReactiveModel({
+      foo: 'bar'
+    });
+    model.foo = 'bin';
+    model.foo = 'bax';
+    assertEquals(2, model.changed);
+  }
+
+  public function testTransitionableModel() {
+    var model = new TransitionableModel({
+      id: 0,
+      name: 'foo',
+      value: 'foo'
+    });
+    var changed:Int = 0;
+    model.subscribe(function (_) changed++);
+    
+    model.setNameAndValue('bar', 'bar');
+    assertEquals(1, changed);
+    assertEquals('bar', model.name);
+    assertEquals('bar', model.value);
+
+    changed = 0;
+
+    model.name = 'foo';
+    model.value = 'foo';
+    assertEquals(2, changed);
+  }
+
 }

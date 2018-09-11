@@ -10,8 +10,8 @@ class WithModelView extends View {
 
   public function template() return html('${model.name}|${model.value}');
 
-  @:onSignal(model.signals.name)
-  @:onSignal(model.signals.value)
+  @:observe(model.signals.name)
+  @:observe(model.signals.value)
   public function onNameChange(_) {
     render();
   }

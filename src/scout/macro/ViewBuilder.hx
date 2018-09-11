@@ -94,8 +94,8 @@ class ViewBuilder {
             }
           }
           
-          if (f.meta.exists(function (m) return m.name == ':onSignal')) {
-            var metas = f.meta.filter(function (m) return m.name == ':onSignal');
+          if (f.meta.exists(function (m) return m.name == ':observe')) {
+            var metas = f.meta.filter(function (m) return m.name == ':observe');
             for (meta in metas) {
               var expr = meta.params[0];
               f.meta.remove(meta);

@@ -1,12 +1,19 @@
 -cp src
 -cp test
 
--main Run
 
 --each
 
+-main Run
 -js dst/test.js
 
 --next
 
+-main Run
 -php dst/test/php
+
+--next
+
+-cp example/src
+-main TodoClient
+-js example/assets/app.js

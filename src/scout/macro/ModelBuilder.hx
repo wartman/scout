@@ -60,9 +60,15 @@ class ModelBuilder {
             newFields.push(makeSetter(f.name, t, f.pos));
             signals.push(makeSignal(f.name, t, f.pos));
 
+            var propName = f.name;
             if (e != null) {
-              var propName = f.name;
-              initializers.push(macro if (this.props.$propName == null) this.$propName = ${e});
+              initializers.push(macro if (props.$propName == null) {
+                this.$propName = ${e}
+              } else {
+                this.$propName = props.$propName;
+              });
+            } else {
+              initializers.push(macro this.$propName = props.$propName);
             }
 
             return false;
@@ -154,7 +160,7 @@ class ModelBuilder {
       private var silent:Bool = false;
 
       public function new(props:$propsType) {
-        this.props = props;
+        this.props = cast {};
         this.signals = cast {};
         $b{ signals.map(function (field) {
           var name = field.name;

@@ -31,6 +31,10 @@ class ModelCollection<T:Model> {
     return this;
   }
 
+  public inline function indexOf(model:T):Int {
+    return models.indexOf(model);
+  }
+
   public inline function filter(f:T->Bool):Array<T> {
     return this.models.filter(f);
   }

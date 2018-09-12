@@ -5,6 +5,7 @@ class Run {
   public static function main() {
     var runner = new TestRunner();
     runner.add(new ViewTest());
+    runner.add(new ElementTest());
     runner.add(new TemplateTest());
     runner.add(new ModelTest());
     runner.add(new ModelCollectionTest());

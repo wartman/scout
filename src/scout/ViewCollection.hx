@@ -4,8 +4,10 @@ package scout;
   import js.html.Element;
 #end
 import scout.Template;
+import scout.Element as ScoutElement;
 
 using Lambda;
+using Reflect;
 
 typedef ViewAddingOptions = { 
   ?silent:Bool,
@@ -19,7 +21,8 @@ class ViewCollection implements Renderable {
 
   public var view(default, null):View;
   public var parent:ViewCollection = null;
-  public var cid(default, null):String = '__scout_' + ids++;
+  // public var cid(default, null):String = '__scout_' + ids++;
+  public var sel:String = '.children';
   public var rendered:Bool = false;
   public var attached:Bool = false;
   private var views:Array<View> = [];
@@ -106,13 +109,30 @@ class ViewCollection implements Renderable {
     return views.iterator();
   }
 
-  public function mount(tag:String):RenderResult {
+  public function mount(tag:String, ?options:Dynamic):RenderResult {
+    if (options == null) {
+      options = {};
+    }
+
+    if (options.hasField('className')) {
+      var cls = options.field('className');
+      sel = '.' + Std.string(cls);
+    } else {
+      options.setField('className', 'children');
+    }
+
     #if sys
       render();
-      return Template.html('<${tag} id="${cid}">${ @:safe content }</${tag}>');
+      return new ScoutElement(tag, options, [ content ]).toRenderResult();
     #else
-      return Template.html('<${tag} id="${cid}"></${tag}>');
+      return new ScoutElement(tag, options, []).toRenderResult();
     #end
+    // #if sys
+    //   render();
+    //   return Template.html('<${tag} id="${cid}">${ @:safe content }</${tag}>');
+    // #else
+    //   return Template.html('<${tag} id="${cid}"></${tag}>');
+    // #end
   }
 
   public function toRenderResult():RenderResult {
@@ -195,7 +215,8 @@ class ViewCollection implements Renderable {
     }
 
     private function getEl() {
-      return view.el.querySelector('#' + cid);
+      // return view.el.querySelector('#' + cid);
+      return view.el.querySelector(sel);
     }
 
     private function inDom() {

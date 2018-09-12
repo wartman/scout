@@ -22,7 +22,7 @@ class ViewTest extends TestCase {
     var bar = new WithChildrenView({});
     bar.render();
     assertEquals(
-      '<div><ulid="__scout_1"><liclass="child">Hey</li><liclass="child">World</li></ul></div>', 
+      '<div><ulclass="children"><liclass="child">Hey</li><liclass="child">World</li></ul></div>', 
       bar.content.clean()
     );
   }
@@ -59,7 +59,7 @@ class ViewTest extends TestCase {
     view.render();
     assertEquals(
       '<div>
-        <ul id="${view.children.cid}">
+        <ul class="children">
           <li class="child">Hey</li>
           <li class="child">World</li>
         </ul>

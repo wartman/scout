@@ -18,7 +18,7 @@ class ViewBuilder {
 
   private var fields:Array<Field>;
   private var attrs:Array<Field> = [];
-  private var renderableAttrs:Array<String> = [];
+  private var renderableAttrs:Map<String, String> = new Map();
   private var defaults:Array<Expr> = [];
   private var initializers:Array<Expr> = [];
   private var eventBindings:Array<Expr> = [];
@@ -55,9 +55,7 @@ class ViewBuilder {
 
             if (f.name == 'className') {
               hasClassName = true;
-              if (!options.has(AttrRender)) {
-                options.push(AttrRender);
-              }
+              options.push(AttrRender('class'));
             }
             if (f.name == 'tag') hasTagName = true; 
             if (f.name == 'sel') hasSelName = true;
@@ -72,8 +70,12 @@ class ViewBuilder {
               pos: f.pos
             });
             
-            if (options.has(AttrRender)) {
-              renderableAttrs.push(f.name);
+            for (option in options) switch (option) {
+              case AttrRender(s):
+                if (f.name == 'className' && s == null) s = 'class';
+                if (s == null) s = f.name;
+                renderableAttrs.set(f.name, s);
+              default:
             }
 
             if (e != null) {
@@ -205,13 +207,9 @@ class ViewBuilder {
           }
           if (el == null) {
             el = js.Browser.document.createElement(tag);
-            $b{ [ for (attr in renderableAttrs) {
-              if (attr == 'className') {
-                macro el.setAttribute('class', $i{attr});
-              } else {
-                var str = { expr:EConst(CString(attr)), pos: Context.currentPos() };
-                macro el.setAttribute(${str}, $i{attr});
-              }
+            $b{ [ for (attr in renderableAttrs.keys()) {
+              var name = { expr:EConst(CString(renderableAttrs.get(attr))), pos: Context.currentPos() };
+              macro el.setAttribute(${name}, $i{attr});
             } ] }
           }
         }
@@ -230,8 +228,9 @@ class ViewBuilder {
 
       override private function generateHtml() {
         var options:Dynamic = {};
-        $b{ [ for (attr in renderableAttrs) {
-          macro options.$attr = $i{attr};
+        $b{ [ for (attr in renderableAttrs.keys()) {
+          var name = { expr:EConst(CString(renderableAttrs.get(attr))), pos: Context.currentPos() };
+          macro Reflect.setField(options, ${name}, $i{attr});
         } ] }
         return new scout.Element(attrs.tag, options, [
           scout.Template.safe(render().content) 
@@ -278,11 +277,20 @@ class ViewBuilder {
       switch (e.expr) {
         case EConst(CIdent(s)):
           switch (s) {
-            case 'tag': AttrRender;
-            default: Context.error('${meta.name} can only accept a `tag` parameter for now.', e.pos);
+            case 'tag': AttrRender(null);
+            default: Context.error('${s} is not a valid parameter for ${meta.name}', e.pos);
+          }
+        case EBinop(
+          OpAssign, 
+          { expr: EConst(CIdent(s)), pos:_ },
+          { expr: EConst(CString(alias)), pos:_ }
+        ):
+          switch (s) {
+            case 'tag': AttrRender(alias);
+            default: Context.error('${s} is not a valid parameter for ${meta.name}', e.pos);
           }
         default:
-          Context.error('${meta.name} only accepts identifiers', e.pos);
+          Context.error('Invalid expression for ${meta.name}', e.pos);
       }
     } ].filter(function (item) return item != null);
   }
@@ -290,5 +298,5 @@ class ViewBuilder {
 }
 
 private enum AttrOptions {
-  AttrRender;
+  AttrRender(?alias:String);
 }

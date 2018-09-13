@@ -56,6 +56,11 @@ class ExampleView extends View {
   // require this).
   @:attr(tag) var id:String = 'Foo';
 
+  // If you need to name the tag something that
+  // Haxe can't handle, you can also give it 
+  // an alias
+  @:attr(tag = 'data-foo') var dataFoo:String = 'foo';
+
   // Watch for changes and re-render when needed.
   @:observe(model.signals.greeting)
   @:observe(model.signals.location)

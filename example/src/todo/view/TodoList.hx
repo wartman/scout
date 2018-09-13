@@ -27,6 +27,7 @@ class TodoList extends View {
     removeView(view);
   }
 
+  @:js
   @:observe(store.signals.todosRemaining)
   private function updateCount(remaining:Int) {
     var count = el.querySelector('.todo-count');

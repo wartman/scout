@@ -4,6 +4,8 @@ import Scout;
 
 class App extends View {
 
+  @:attr(tag) var id:String = 'App';
+
   public function template() return Scout.html('
     <section class="todoapp">
       ${children}

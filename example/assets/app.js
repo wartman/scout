@@ -89,6 +89,9 @@ Reflect.fields = function(o) {
 };
 var Scout = function() { };
 Scout.__name__ = true;
+Scout.mount = function(sel,view) {
+	window.document.querySelector(sel).appendChild(view.render().el);
+};
 var Std = function() { };
 Std.__name__ = true;
 Std.string = function(s) {
@@ -104,14 +107,14 @@ StringTools.htmlEscape = function(s,quotes) {
 		return s;
 	}
 };
-var TodoClient = function() { };
-TodoClient.__name__ = true;
-TodoClient.main = function() {
+var TodoApp = function() { };
+TodoApp.__name__ = true;
+TodoApp.main = function() {
 	var store = new todo_model_Store({ todos : new scout_ModelCollection()});
 	store.props.todos.add(new todo_model_Todo({ label : "Hey world!"}));
 	var app = new todo_view_Header({ title : "Todo", store : store});
-	var app1 = new todo_view_App({ sel : "#Root"},[app,new todo_view_TodoList({ store : store})]);
-	app1.render();
+	var app1 = new todo_view_App({ },[app,new todo_view_TodoList({ store : store})]);
+	Scout.mount("#Root",app1);
 };
 var haxe_IMap = function() { };
 haxe_IMap.__name__ = true;
@@ -438,7 +441,7 @@ scout_Dom.closest = function(el,selector) {
 		}
 		el = el.parentNode;
 	}
-	if(el.nodeType == scout_Dom.docNodeType) {
+	if(el == null || el.nodeType == scout_Dom.docNodeType) {
 		return null;
 	}
 	return el;
@@ -456,7 +459,7 @@ var scout_Element = function(tag,attrs,children) {
 	this.children = [];
 	this.attrs = new haxe_ds_StringMap();
 	this.classes = [];
-	this.tag = tag;
+	this.set_tag(tag);
 	this.children = children;
 	var _g = 0;
 	var _g1 = Reflect.fields(attrs);
@@ -473,7 +476,14 @@ var scout_Element = function(tag,attrs,children) {
 scout_Element.__name__ = true;
 scout_Element.__interfaces__ = [scout_Renderable];
 scout_Element.prototype = {
-	addClass: function(cls) {
+	set_tag: function(tag) {
+		if(scout_Element.tagNames.indexOf(tag) <= 0) {
+			throw new js__$Boot_HaxeError("Invalid tag name: ${tag}");
+		}
+		this.tag = tag;
+		return tag;
+	}
+	,addClass: function(cls) {
 		this.classes.push(cls);
 	}
 	,removeClass: function(cls) {
@@ -501,7 +511,11 @@ scout_Element.prototype = {
 			return scout__$Template_RenderResult_$Impl_$._new("<" + this.tag + this.renderAttrs() + "/>");
 		}
 		return scout__$Template_RenderResult_$Impl_$._new("<" + this.tag + this.renderAttrs() + ">" + this.children.map(function(s) {
-			return StringTools.htmlEscape(Std.string(s));
+			if(js_Boot.__instanceof(s,scout_Renderable)) {
+				return (js_Boot.__cast(s , scout_Renderable)).toRenderResult();
+			} else {
+				return StringTools.htmlEscape(Std.string(s));
+			}
 		}).join("") + "</" + this.tag + ">");
 	}
 	,renderAttrs: function() {
@@ -702,8 +716,22 @@ scout__$Template_RenderResult_$Impl_$._new = function(str) {
 scout__$Template_RenderResult_$Impl_$.ofRenderable = function(renderable) {
 	return renderable.toRenderResult();
 };
+var scout__$Template_SafeContent = function(content) {
+	this.content = content;
+};
+scout__$Template_SafeContent.__name__ = true;
+scout__$Template_SafeContent.__interfaces__ = [scout_Renderable];
+scout__$Template_SafeContent.prototype = {
+	toRenderResult: function() {
+		return this.content;
+	}
+	,__class__: scout__$Template_SafeContent
+};
 var scout_Template = function() { };
 scout_Template.__name__ = true;
+scout_Template.safe = function(str) {
+	return new scout__$Template_SafeContent(str);
+};
 var scout_View = function() {
 	var this1 = { slots : []};
 	this.onRemove = this1;
@@ -1203,16 +1231,11 @@ todo_model_Todo.prototype = {
 var todo_view_App = function(attrs,children) {
 	scout_View.call(this);
 	this.attrs = attrs;
+	if(this.attrs.id == null) {
+		this.attrs.id = "App";
+	}
 	this.attrs.tag = "div";
-	if(attrs.sel != null) {
-		this.set_el(window.document.querySelector(attrs.sel));
-	}
-	if(this.el == null) {
-		this.set_el(window.document.createElement(attrs.tag));
-		if(attrs.className != null) {
-			this.el.setAttribute("class",attrs.className);
-		}
-	}
+	this.ensureElement();
 	this.children = new scout_ViewCollection(this,children);
 	this.delegateEvents(this.events);
 };
@@ -1220,7 +1243,19 @@ todo_view_App.__name__ = true;
 todo_view_App.__super__ = scout_View;
 todo_view_App.prototype = $extend(scout_View.prototype,{
 	template: function() {
-		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <section class=\"todoapp\">\r\n      " + this.children.toRenderResult() + "\r\n    </section>\r\n    <footer class=\"info\">\r\n      <p>Double-click to edit a todo.</p>\r\n      <p>Written by <a href=\"https://github.com/wartman\">wartman</a></p>\r\n      <p>Part of <a href=\"http://todomvc.com\">TodoMVC</a></p>\r\n    </footer>\r\n  ");
+		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <section class=\"todoapp\">\r\n      " + this.children.toRenderResult() + "\r\n    </section>\r\n    \r\n    <footer class=\"info\">\r\n      <p>Double-click to edit a todo.</p>\r\n      <p>Written by <a href=\"https://github.com/wartman\">wartman</a></p>\r\n      <p>Part of <a href=\"http://todomvc.com\">TodoMVC</a></p>\r\n    </footer>\r\n  ");
+	}
+	,ensureElement: function() {
+		if(this.attrs.sel != null) {
+			this.set_el(window.document.querySelector(this.attrs.sel));
+		}
+		if(this.el == null) {
+			this.set_el(window.document.createElement(this.attrs.tag));
+			this.el.setAttribute("id",this.attrs.id);
+		}
+	}
+	,get_id: function() {
+		return this.attrs.id;
 	}
 	,get_className: function() {
 		return this.attrs.className;
@@ -1242,15 +1277,7 @@ var todo_view_Header = function(attrs,children) {
 	if(this.attrs.className == null) {
 		this.attrs.className = "header";
 	}
-	if(attrs.sel != null) {
-		this.set_el(window.document.querySelector(attrs.sel));
-	}
-	if(this.el == null) {
-		this.set_el(window.document.createElement(attrs.tag));
-		if(attrs.className != null) {
-			this.el.setAttribute("class",attrs.className);
-		}
-	}
+	this.ensureElement();
 	this.children = new scout_ViewCollection(this,children);
 	this.events.push({ selector : ".new-todo", action : "keydown", method : $bind(this,this.handleSubmit)});
 	this.delegateEvents(this.events);
@@ -1268,6 +1295,15 @@ todo_view_Header.prototype = $extend(scout_View.prototype,{
 	}
 	,template: function() {
 		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <h1>" + StringTools.htmlEscape(Std.string(this.attrs.title)) + "</h1>\r\n    <input class=\"new-todo\" placeholder=\"What needs doing?\">\r\n  ");
+	}
+	,ensureElement: function() {
+		if(this.attrs.sel != null) {
+			this.set_el(window.document.querySelector(this.attrs.sel));
+		}
+		if(this.el == null) {
+			this.set_el(window.document.createElement(this.attrs.tag));
+			this.el.setAttribute("class",this.attrs.className);
+		}
 	}
 	,get_tag: function() {
 		return this.attrs.tag;
@@ -1295,15 +1331,7 @@ var todo_view_TodoItem = function(attrs,children) {
 	if(this.attrs.tag == null) {
 		this.attrs.tag = "li";
 	}
-	if(attrs.sel != null) {
-		this.set_el(window.document.querySelector(attrs.sel));
-	}
-	if(this.el == null) {
-		this.set_el(window.document.createElement(attrs.tag));
-		if(attrs.className != null) {
-			this.el.setAttribute("class",attrs.className);
-		}
-	}
+	this.ensureElement();
 	this.children = new scout_ViewCollection(this,children);
 	this.initializeVisibility();
 	scout__$Signal_Signal_$Impl_$.add(this.attrs.todo.signals.editing,$bind(this,this.toggleEditMode));
@@ -1386,6 +1414,15 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 	,template: function() {
 		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <input class=\"edit\" type=\"text\" value=\"" + StringTools.htmlEscape(Std.string(this.attrs.todo.props.label)) + "\" />\r\n    <div class=\"view\">\r\n      <input class=\"toggle\" type=\"checkbox\"" + StringTools.htmlEscape(this.attrs.todo.props.completed ? " checked" : "") + " />\r\n      <label>" + StringTools.htmlEscape(Std.string(this.attrs.todo.props.label)) + "</label>\r\n      <button class=\"destroy\"></button>\r\n    </div>\r\n  ");
 	}
+	,ensureElement: function() {
+		if(this.attrs.sel != null) {
+			this.set_el(window.document.querySelector(this.attrs.sel));
+		}
+		if(this.el == null) {
+			this.set_el(window.document.createElement(this.attrs.tag));
+			this.el.setAttribute("class",this.attrs.className);
+		}
+	}
 	,get_className: function() {
 		return this.attrs.className;
 	}
@@ -1410,15 +1447,7 @@ var todo_view_TodoList = function(attrs,children) {
 		this.attrs.className = "todo-list-wrapper";
 	}
 	this.attrs.tag = "div";
-	if(attrs.sel != null) {
-		this.set_el(window.document.querySelector(attrs.sel));
-	}
-	if(this.el == null) {
-		this.set_el(window.document.createElement(attrs.tag));
-		if(attrs.className != null) {
-			this.el.setAttribute("class",attrs.className);
-		}
-	}
+	this.ensureElement();
 	this.children = new scout_ViewCollection(this,children);
 	this.initializeViews();
 	scout__$Signal_Signal_$Impl_$.add(this.attrs.store.props.todos.onAdd,$bind(this,this.addTodo));
@@ -1448,12 +1477,12 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 		});
 		this.removeView(view);
 	}
-	,updateCount: function(_) {
+	,updateCount: function(remaining) {
 		var count = this.el.querySelector(".todo-count");
 		if(count == null) {
 			return;
 		}
-		count.innerHTML = this.attrs.store.props.todosRemaining + " Remaining";
+		count.innerHTML = remaining + " Remaining";
 	}
 	,filterAll: function(e) {
 		this.attrs.store.set_visible(todo_model_VisibleTodos.VisibleAll);
@@ -1466,6 +1495,15 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 	}
 	,template: function() {
 		return scout__$Template_RenderResult_$Impl_$._new("\r\n    " + this.children.mount("ul",{ className : "todo-list"}) + "\r\n\r\n    <footer class=\"footer\">\r\n      <span class=\"todo-count\">" + StringTools.htmlEscape(Std.string(this.attrs.store.props.todosRemaining)) + " Remaining</span>\r\n\r\n      <ul class=\"filters\">\r\n        <li><a href=\"#all\" class=\"filter-all\">All</a></li>\r\n        <li><a href=\"#completed\" class=\"filter-completed\">Completed</a></li>\r\n        <li><a href=\"#pending\" class=\"filter-pending\">Pending</a></li>\r\n      </ul>\r\n    </footer>\r\n  ");
+	}
+	,ensureElement: function() {
+		if(this.attrs.sel != null) {
+			this.set_el(window.document.querySelector(this.attrs.sel));
+		}
+		if(this.el == null) {
+			this.set_el(window.document.createElement(this.attrs.tag));
+			this.el.setAttribute("class",this.attrs.className);
+		}
 	}
 	,get_className: function() {
 		return this.attrs.className;
@@ -1505,5 +1543,5 @@ scout_View.autoIdIndex = 0;
 scout_ViewCollection.ids = 0;
 todo_model_Store.__scout_ids = 0;
 todo_model_Todo.__scout_ids = 0;
-TodoClient.main();
+TodoApp.main();
 })(typeof window != "undefined" ? window : typeof global != "undefined" ? global : typeof self != "undefined" ? self : this);

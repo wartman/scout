@@ -20,10 +20,27 @@ abstract RenderResult(String) from String to String {
 
 }
 
+private class SafeContent implements Renderable {
+
+  private var content:String;
+
+  public function new(content:String) {
+    this.content = content;
+  }
+
+  public function toRenderResult():RenderResult {
+    return cast content;
+  }
+
+}
+
 class Template {
 
   macro public static function html(e:ExprOf<String>)
     return escape(e);
+
+  public static function safe(str:String)
+    return new SafeContent(str);
 
   #if macro
   
@@ -47,7 +64,13 @@ class Template {
             if (params[0].toString() == 'scout.RenderResult') 
               return macro @:pos(expr.pos) new scout.Template.RenderResult(${expr}.join(''));
             else
-              return macro @:pos(expr.pos) ${expr}.map(function (s) return StringTools.htmlEscape(Std.string(s))).join('');
+              return macro @:pos(expr.pos) ${expr}.map(function (s) { 
+                if (Std.is(s, scout.Template.Renderable)) {
+                  return cast(s, scout.Template.Renderable).toRenderResult();
+                } else {
+                  return StringTools.htmlEscape(Std.string(s));
+                }
+              }).join('');
           }
           if (t.toString() == 'scout.ViewCollection') {
             return macro @:pos(expr.pos) ${expr}.toRenderResult();

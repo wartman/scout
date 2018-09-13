@@ -11,6 +11,7 @@ class TodoItem extends View {
   @:attr var todo:Todo;
   @:attr var store:Store;
   
+  @:js
   @:init
   public function initializeVisibility() {
     isVisible(store.visible);
@@ -29,6 +30,7 @@ class TodoItem extends View {
     update();
   }
 
+  @:js
   public function update() {
     todo.label = cast(el.querySelector('.edit'), js.html.InputElement).value;
     todo.editing = false;
@@ -52,6 +54,7 @@ class TodoItem extends View {
     store.todos.remove(todo);
   }
 
+  @:js
   @:observe(todo.signals.editing)
   public function toggleEditMode(_) {
     if (todo.editing) {
@@ -62,6 +65,7 @@ class TodoItem extends View {
     }
   }
 
+  @:js
   @:observe(store.signals.visible)
   @:observe(todo.signals.completed)
   public function isVisible(_:Dynamic) {
@@ -72,10 +76,12 @@ class TodoItem extends View {
     }
   }
 
+  @:js
   public function show() {
     el.setAttribute('style', 'display:block;');
   }
 
+  @:js
   public function hide() {
     el.setAttribute('style', 'display:none;');
   }

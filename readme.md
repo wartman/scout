@@ -2,7 +2,7 @@ Scout
 =====
 
 Scout is a simple framework for Haxe that works something
-like Backbone. It's biggest benefit is that it's designed
+like Backbone. Its biggest benefit is that it's designed
 to work both on PHP and javascript using almost the
 same code in both contexts.
 
@@ -43,6 +43,19 @@ class ExampleView extends View {
 
   @:attr var model:ExampleModel;
 
+  // The `tag` attribute will set the HTML element
+  // this view will be wrapped in.
+  @:attr var tag:String = 'section'; 
+
+  // `className` will be used as the element's `class`
+  // attribute.
+  @:attr var className:String = 'example'; 
+
+  // To render an attribute in the view's tag, 
+  // add `tag` as a meta param (`className` does not
+  // require this).
+  @:attr(tag) var id:String = 'Foo';
+
   // Watch for changes and re-render when needed.
   @:observe(model.signals.greeting)
   @:observe(model.signals.location)
@@ -77,13 +90,8 @@ class Main {
       model: model
     });
 
-    #if js
-      Dom.select('#Root').appendChild(view.render().el);
-    #else
-      // Something like this:
-      Sys.print('<div id="Root">${ view.render().content }</div>');
-      // Although this part is not really ready yet.
-    #end
+    // `Scout.mount` will work in js and in sys targets.
+    Scout.mount('#Root', view);
   }
 
 }

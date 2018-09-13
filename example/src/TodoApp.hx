@@ -1,7 +1,8 @@
+import Scout;
 import todo.model.*;
 import todo.view.*;
 
-class TodoClient {
+class TodoApp {
 
   public static function main() {
     var store = new Store({
@@ -11,9 +12,7 @@ class TodoClient {
       label: 'Hey world!'
     }));
 
-    var app = new App({
-      sel: '#Root'
-    }, [
+    var app = new App({}, [
       new Header({ 
         title: 'Todo',
         store: store 
@@ -22,7 +21,8 @@ class TodoClient {
         store: store
       })
     ]);
-    app.render();
+
+    Scout.mount('#Root', app);
   }
 
 }

@@ -4,6 +4,7 @@ import haxe.macro.Expr;
 import haxe.macro.Context;
 
 using Lambda;
+using scout.macro.MacroTools;
 
 class ViewBuilder {
 
@@ -17,6 +18,7 @@ class ViewBuilder {
 
   private var fields:Array<Field>;
   private var attrs:Array<Field> = [];
+  private var renderableAttrs:Array<String> = [];
   private var defaults:Array<Expr> = [];
   private var initializers:Array<Expr> = [];
   private var eventBindings:Array<Expr> = [];
@@ -42,8 +44,21 @@ class ViewBuilder {
     return fields.filter(function (f) {
       switch (f.kind) {
         case FVar(t, e):
-          if (f.meta.exists(function (m) return m.name == ':attr' || m.name == ':attribute')) {
-            if (f.name == 'className') hasClassName = true;
+          var metaNames = [ ':attr', ':attribute' ];
+          if (f.meta.hasMeta(metaNames)) {
+
+            var metas = f.meta.extractMeta(metaNames);
+            if (metas.length > 1) {
+              Context.error('A var may only have one :attr or :attribute metadata entry', f.pos);
+            }
+            var options = extractAttrOptions(metas[0]);
+
+            if (f.name == 'className') {
+              hasClassName = true;
+              if (!options.has(AttrRender)) {
+                options.push(AttrRender);
+              }
+            }
             if (f.name == 'tag') hasTagName = true; 
             if (f.name == 'sel') hasSelName = true;
 
@@ -51,12 +66,16 @@ class ViewBuilder {
               name: f.name,
               kind: FVar(t, null),
               access: [ APublic ],
-              meta: f.meta.exists(function (entry) return entry.name == ':optional') || e != null ? [ 
+              meta: f.meta.hasMeta([ ':optional' ]) || e != null ? [ 
                 { name: ':optional', pos: f.pos } 
               ] : [],
               pos: f.pos
             });
             
+            if (options.has(AttrRender)) {
+              renderableAttrs.push(f.name);
+            }
+
             if (e != null) {
               var name = f.name;
               defaults.push( macro if (this.attrs.$name == null) this.attrs.$name = ${e} );
@@ -68,20 +87,32 @@ class ViewBuilder {
         case FFun(func):
           var name = f.name;
 
+          if (f.meta.hasMeta([ ':js' ])) {
+            if (!isJs) {
+              return false;
+            }
+          }
+
+          if (f.meta.hasMeta([ ':sys' ])) {
+            if (isJs) {
+              return false;
+            }
+          }
+
           if (name == 'template') {
             f.access.push(haxe.macro.Access.AOverride);
           }
 
-          if (f.meta.exists(function (m) return m.name == ':init')) {
+          if (f.meta.hasMeta([ ':init' ])) {
             initializers.push(macro this.$name() );
           }
 
-          if (f.meta.exists(function (m) return m.name == ':on')) {
+          if (f.meta.hasMeta([ ':on' ])) {
             if (!isJs) {
               return false;
             }
             
-            var metas = f.meta.filter(function (m) return m.name == ':on');
+            var metas = f.meta.extractMeta([ ':on' ]);
             for (meta in metas) {
               var type = meta.params[0];
               var target = meta.params[1];
@@ -94,8 +125,8 @@ class ViewBuilder {
             }
           }
           
-          if (f.meta.exists(function (m) return m.name == ':observe')) {
-            var metas = f.meta.filter(function (m) return m.name == ':observe');
+          if (f.meta.hasMeta([ ':observe' ])) {
+            var metas = f.meta.extractMeta([ ':observe' ]);
             for (meta in metas) {
               var expr = meta.params[0];
               f.meta.remove(meta);
@@ -159,20 +190,30 @@ class ViewBuilder {
           this.attrs = attrs;
           $b{defaults};
           
-          if (attrs.sel != null) {
-            el = js.Browser.document.querySelector(attrs.sel);
-          } 
-
-          if (el == null){
-            el = js.Browser.document.createElement(attrs.tag);
-            if (attrs.className != null) el.setAttribute('class', attrs.className);
-          }
+          ensureElement();
 
           this.children = new scout.ViewCollection(this, children);
 
           $b{initializers};
           $b{eventBindings};
           this.delegateEvents(events);
+        }
+
+        private function ensureElement() {
+          if (attrs.sel != null) {
+            el = js.Browser.document.querySelector(sel);
+          }
+          if (el == null) {
+            el = js.Browser.document.createElement(tag);
+            $b{ [ for (attr in renderableAttrs) {
+              if (attr == 'className') {
+                macro el.setAttribute('class', $i{attr});
+              } else {
+                var str = { expr:EConst(CString(attr)), pos: Context.currentPos() };
+                macro el.setAttribute(${str}, $i{attr});
+              }
+            } ] }
+          }
         }
 
       }).fields);
@@ -187,22 +228,14 @@ class ViewBuilder {
         $b{initializers};
       }
 
-      // todo: this is messy.
-
       override private function generateHtml() {
-        return '<' + attrs.tag + generateAttrs() + '>' 
-          + template() + '</' + attrs.tag + '>';
-      }
-
-      private function generateAttrs() {
-        var out = [];
-        if (attrs.className != null) {
-          out.push('class="' + StringTools.htmlEscape(attrs.className) + '"');
-        }
-        if (out.length > 0) {
-          return ' ' + out.join(' ');
-        }
-        return '';
+        var options:Dynamic = {};
+        $b{ [ for (attr in renderableAttrs) {
+          macro options.$attr = $i{attr};
+        } ] }
+        return new scout.Element(attrs.tag, options, [
+          scout.Template.safe(render().content) 
+        ]).toRenderResult();
       }
 
     }).fields);
@@ -240,4 +273,22 @@ class ViewBuilder {
     };
   }
 
+  private function extractAttrOptions(meta:MetadataEntry):Array<AttrOptions> {
+    return [ for (e in meta.params) {
+      switch (e.expr) {
+        case EConst(CIdent(s)):
+          switch (s) {
+            case 'tag': AttrRender;
+            default: Context.error('${meta.name} can only accept a `tag` parameter for now.', e.pos);
+          }
+        default:
+          Context.error('${meta.name} only accepts identifiers', e.pos);
+      }
+    } ].filter(function (item) return item != null);
+  }
+
+}
+
+private enum AttrOptions {
+  AttrRender;
 }

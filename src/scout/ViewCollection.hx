@@ -123,7 +123,7 @@ class ViewCollection implements Renderable {
 
     #if sys
       render();
-      return new ScoutElement(tag, options, [ content ]).toRenderResult();
+      return new ScoutElement(tag, options, [ Template.safe(content) ]).toRenderResult();
     #else
       return new ScoutElement(tag, options, []).toRenderResult();
     #end

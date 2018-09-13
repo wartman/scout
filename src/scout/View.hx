@@ -1,5 +1,7 @@
 package scout;
 
+import scout.Template;
+
 #if js
   import js.html.Element;
 

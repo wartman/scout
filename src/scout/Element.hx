@@ -27,7 +27,14 @@ class Element implements Renderable {
     'track', 'wbr'
   ];
 
-  private var tag:String;
+  @:isVar private var tag(default, set):String;
+  public function set_tag(tag:String) {
+    if (tagNames.indexOf(tag) <= 0) {
+      throw "Invalid tag name: ${tag}";
+    }
+    this.tag = tag;
+    return tag;
+  }
   private var classes:Array<String> = [];
   private var attrs:Map<String, Dynamic> = new Map();
   private var children:Array<Dynamic> = [];

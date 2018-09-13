@@ -41,7 +41,7 @@ class Dom {
       if (el.matches(selector)) return el;
       el = cast el.parentNode;
     }
-    if (el.nodeType == docNodeType) return null;
+    if (el == null || el.nodeType == docNodeType) return null;
     return el;
   }
 

@@ -15,5 +15,11 @@
 --next
 
 -cp example/src
--main TodoClient
+-main TodoApp
 -js example/assets/app.js
+
+--next
+
+-cp example/src
+-main TodoApp
+-php example/lib

@@ -1,10 +1,12 @@
 package scout;
 
-import haxe.macro.Expr;
-import haxe.macro.Context;
+#if macro
+  import haxe.macro.Expr;
+  import haxe.macro.Context;
 
-using haxe.macro.Tools;
-using haxe.macro.MacroStringTools;
+  using haxe.macro.Tools;
+  using haxe.macro.MacroStringTools;
+#end
 
 interface Renderable {
   public function toRenderResult():RenderResult;
@@ -72,8 +74,22 @@ class Template {
                 }
               }).join('');
           }
+          
+          // Note: this may not be needed, but I'm keeping it here
+          //       for the moment.
           if (t.toString() == 'scout.ViewCollection') {
             return macro @:pos(expr.pos) ${expr}.toRenderResult();
+          }
+
+          // Note: will need to make this more robust and check up
+          //       the inheritance chain.
+          if (t.toString() != 'String') {
+            var interfaces = Context.getType(t.toString()).getClass().interfaces;
+            for (i in interfaces) {
+              if (i.t.toString() == 'scout.Renderable') {
+                return macro @:pos(expr.pos) ${expr}.toRenderResult();
+              }
+            }
           }
         default:
       }

@@ -25,13 +25,13 @@ class ElementTest extends TestCase {
       new Element('p', {}, [ 'hello' ]),
       '<p>world</p>',
     ]);
-    assertEquals('<div class="bar"><p>hello</p><p>world</p></div>', el.render());
+    assertEquals('<div class="bar"><p>hello</p>&lt;p&gt;world&lt;/p&gt;</div>', el.render());
   }
 
   public function testInsideTemplate() {
     var el = new Element('p', { className: 'foo' }, [ 'hello world' ]);
     var out = Template.html('<div>${el}</div>');
-    assertEquals('<div><p class="foo">hello world</p>', out);
+    assertEquals('<div><p class="foo">hello world</p></div>', out);
   }
 
 }

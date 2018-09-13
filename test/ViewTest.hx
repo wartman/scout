@@ -77,7 +77,7 @@ class ViewTest extends TestCase {
   public function testAttrRendering() {
     var view = new WithRenderedAttrsView({ key: 'bar' });
     view.render();
-    assertEquals('<section class="foo" id="foo" data-foo="foo">bar</section>', view.content.clean());
+    assertEquals('<section class="foo" id="Foo" data-foo="foo">bar</section>'.clean(), view.content.clean());
   }
 
   #if js

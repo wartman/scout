@@ -4,7 +4,7 @@ import scout.Model;
 
 class ReactiveModel implements Model {
   
-  @:prop @:autoIncrement var id:Int;
+  @:prop(auto) var id:Int;
   @:prop var foo:String;
   public var changed:Int = 0;
 

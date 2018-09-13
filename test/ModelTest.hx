@@ -125,4 +125,13 @@ class ModelTest extends TestCase {
     assertEquals(2, changed);
   }
 
+  public function testOptionalModel() {
+    var model = new OptionalModel({
+      id: 1,
+      name: 'foo'
+    });
+
+    assertEquals(null, model.value);
+  }
+
 }

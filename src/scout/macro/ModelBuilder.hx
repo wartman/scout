@@ -6,6 +6,7 @@ import haxe.macro.Context;
 
 using Lambda;
 using haxe.macro.Tools;
+using scout.macro.MacroTools;
 
 class ModelBuilder {
 
@@ -38,10 +39,16 @@ class ModelBuilder {
     return fields.filter(function (f) {
       switch (f.kind) {
         case FVar(t, e):
-          if (f.meta.exists(function (entry) return entry.name == ':property' || entry.name == ':prop')) {
-            var propIsOptional = f.meta.exists(function (entry) return entry.name == ':optional') || e != null;
+          var propNames = [ ':prop', ':property' ];
+          if (f.meta.hasMeta(propNames)) {
+            var propIsOptional = f.meta.hasMeta([ ':optional' ]) || e != null;
+            var metas = f.meta.extractMeta(propNames);
+            if (metas.length > 1) {
+              Context.error('A var may only have one :prop or :property metadata entry', f.pos);
+            }
+            var options = extractPropOptions(metas[0]);
 
-            if (f.meta.exists(function (entry) return entry.name == ':autoIncrement')) {
+            if (options.has(PropAuto)) {
               propIsOptional = true;
               if (!newFields.exists(function (f) return f.name == '__scout_ids')) {
                 newFields.push({
@@ -52,6 +59,10 @@ class ModelBuilder {
                 });
               }
               e = macro __scout_ids++;
+            }
+
+            if (options.has(PropOptional)) {
+              propIsOptional = true;
             }
             
             props.push(makeRealProp(f.name, t, f.pos, propIsOptional));
@@ -263,4 +274,24 @@ class ModelBuilder {
     };
   }
 
+  private function extractPropOptions(meta:MetadataEntry):Array<PropOptions> {
+    return [ for (e in meta.params) {
+      switch (e.expr) {
+        case EConst(CIdent(s)):
+          switch (s) {
+            case 'auto': PropAuto;
+            case 'optional': PropOptional;
+            default: Context.error('${s} is not a valid parameter for ${meta.name}', e.pos);
+          }
+        default:
+          Context.error('${meta.name} only accepts identifiers', e.pos);
+      }
+    } ].filter(function (item) return item != null);
+  }
+
+}
+
+private enum PropOptions {
+  PropAuto;
+  PropOptional;
 }

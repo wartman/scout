@@ -29,7 +29,9 @@ class ElementTest extends TestCase {
   }
 
   public function testInsideTemplate() {
-    var el = new Element('p', { className: 'foo' }, [ 'hello world' ]);
+    var el = new Element('p', {
+      className: 'foo'
+    }, [ 'hello world' ]);
     var out = Template.html('<div>${el}</div>');
     assertEquals('<div><p class="foo">hello world</p></div>', out);
   }

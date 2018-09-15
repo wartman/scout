@@ -12,7 +12,9 @@ class TodoApp {
       label: 'Hey world!'
     }));
 
-    var app = new App({}, [
+    var app = new App({
+      sel: '#App'
+    }, [
       new Header({ 
         title: 'Todo',
         store: store 
@@ -22,7 +24,23 @@ class TodoApp {
       })
     ]);
 
-    Scout.mount('#Root', app);
+    #if js
+      Scout.mount('#Root', app);
+    #else 
+      Sys.print('
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>ToDo</title>
+            <link rel="stylesheet" href="assets/app.css">
+          </head>
+          <body>
+            <div id="Root">${ app.render().content }</div>
+            <script type="text/javascript" src="assets/app.js"></script>
+          </body>
+        </html>
+      ');
+    #end
   }
 
 }

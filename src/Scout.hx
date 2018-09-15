@@ -12,22 +12,10 @@ class Scout {
   macro public static function html(e:ExprOf<String>)
     return scout.Template.escape(e);
 
-  public static function mount(sel:String, view:View) {
-    #if sys
-      var options:Dynamic = {};
-      if (StringTools.startsWith(sel, '#')) {
-        options.id = sel.substring(1);
-      } else if (StringTools.startsWith(sel, '.')) {
-        options.className = sel.substring(1);
-      }
-      Sys.print(
-        new Element('div', options, [
-          Template.safe(view.render().content)
-        ]).render()
-      );
-    #else
+  #if js
+    public static function mount(sel:String, view:View) {
       Dom.select(sel).appendChild(view.render().el);
-    #end
-  }
+    }
+  #end
 
 }

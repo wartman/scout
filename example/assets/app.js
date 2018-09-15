@@ -113,7 +113,7 @@ TodoApp.main = function() {
 	var store = new todo_model_Store({ todos : new scout_ModelCollection()});
 	store.props.todos.add(new todo_model_Todo({ label : "Hey world!"}));
 	var app = new todo_view_Header({ title : "Todo", store : store});
-	var app1 = new todo_view_App({ },[app,new todo_view_TodoList({ store : store})]);
+	var app1 = new todo_view_App({ sel : "#App"},[app,new todo_view_TodoList({ store : store})]);
 	Scout.mount("#Root",app1);
 };
 var haxe_IMap = function() { };
@@ -1420,11 +1420,15 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 		}
 		if(this.el == null) {
 			this.set_el(window.document.createElement(this.attrs.tag));
+			this.el.setAttribute("id",this.attrs.id);
 			this.el.setAttribute("class",this.attrs.className);
 		}
 	}
 	,get_className: function() {
 		return this.attrs.className;
+	}
+	,get_id: function() {
+		return this.attrs.id;
 	}
 	,get_tag: function() {
 		return this.attrs.tag;
@@ -1469,7 +1473,7 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 		}
 	}
 	,addTodo: function(todo1) {
-		this.addView(new todo_view_TodoItem({ todo : todo1, store : this.attrs.store}));
+		this.addView(new todo_view_TodoItem({ sel : "#Todo-" + todo1.props.id, id : "Todo-" + todo1.props.id, todo : todo1, store : this.attrs.store}));
 	}
 	,removeTodo: function(todo1) {
 		var view = this.children.find(function(view1) {

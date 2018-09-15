@@ -10,6 +10,7 @@
 --next
 
 -main Run
+-D php7
 -php dst/test/php
 
 --next
@@ -22,4 +23,5 @@
 
 -cp example/src
 -main TodoApp
+-D php7
 -php example/lib

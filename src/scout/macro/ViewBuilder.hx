@@ -227,13 +227,13 @@ class ViewBuilder {
       }
 
       override private function generateHtml() {
-        var options:Dynamic = {};
+        var options:Dynamic = {}
         $b{ [ for (attr in renderableAttrs.keys()) {
           var name = { expr:EConst(CString(renderableAttrs.get(attr))), pos: Context.currentPos() };
           macro Reflect.setField(options, ${name}, $i{attr});
         } ] }
         return new scout.Element(attrs.tag, options, [
-          scout.Template.safe(render().content) 
+          scout.Template.safe(template())
         ]).toRenderResult();
       }
 

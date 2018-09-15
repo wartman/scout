@@ -18,7 +18,12 @@ class TodoList extends View {
 
   @:observe(store.todos.onAdd)
   public function addTodo(todo:Todo) {
-    addView(new TodoItem({ todo: todo, store: store }));
+    addView(new TodoItem({ 
+      sel: '#Todo-${todo.id}',
+      id: 'Todo-${todo.id}',
+      todo: todo, 
+      store: store 
+    }));
   }
 
   @:observe(store.todos.onRemove)

@@ -7,6 +7,7 @@ import todo.model.Store;
 class TodoItem extends View {
 
   @:attr var className:String = 'todo-item';
+  @:attr(tag) var id:String;
   @:attr var tag:String = 'li';
   @:attr var todo:Todo;
   @:attr var store:Store;

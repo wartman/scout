@@ -95,7 +95,8 @@ class Main {
       model: model
     });
 
-    // `Scout.mount` will work in js and in sys targets.
+    // Only works for JS targets for now -- not sure
+    // how to best handle SYS targets yet.
     Scout.mount('#Root', view);
   }
 

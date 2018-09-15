@@ -10,7 +10,14 @@ class Run {
     runner.add(new ModelTest());
     runner.add(new ModelCollectionTest());
     runner.add(new ViewCollectionTest());
+
+    #if php
+      Sys.print('<code>');
+    #end
     runner.run();
+    #if php
+      Sys.print('</code>');
+    #end
   }
 
 }

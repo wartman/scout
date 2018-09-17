@@ -21,8 +21,8 @@ class ExampleModel implements Model {
   // Watch other props and compute a value when they change.
   @:computed(greeting, location) var fullGreeting = greeting + ' ' + location;
 
-  // Observe other signals. Works the same as on Views.
-  @:observe(signals.greeting)
+  // Observe states. Works the same as on Views.
+  @:observe(states.greeting)
   public function traceGreeting(greeting:String) {
     trace(greeting);
   }
@@ -62,8 +62,8 @@ class ExampleView extends View {
   @:attr(tag = 'data-foo') var dataFoo:String = 'foo';
 
   // Watch for changes and re-render when needed.
-  @:observe(model.signals.greeting)
-  @:observe(model.signals.location)
+  @:observe(model.states.greeting)
+  @:observe(model.states.location)
   public function updateOnChange(_) {
     render();
   }

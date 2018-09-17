@@ -103,7 +103,7 @@ class ViewTest extends TestCase {
         name: 'Two',
         value: 'Waiting...'
       });
-      model.observers.name.subscribe(function (value) {
+      model.states.name.subscribe(function (value) {
         model2.value = 'Model 1 name: ' + value;
       });
       

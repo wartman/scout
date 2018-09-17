@@ -1,6 +1,6 @@
 package scout;
 
-class ObservableValue<T> implements Observable<T> {
+class State<T> implements Stateful<T> {
 
   private var value:T;
   public var signal(default, never):Signal<T> = new Signal();

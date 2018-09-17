@@ -1,6 +1,6 @@
 package scout;
 
-class ObservableSubscriber<T:Subscriber<M>, M> implements Observable<T> {
+class ObservableState<T:Observable<M>, M> implements Stateful<T> {
 
   private var value:T;
   public var signal(default, never):Signal<T> = new Signal();

@@ -2,7 +2,7 @@ package scout;
 
 using Lambda;
 
-class ModelCollection<T:Model> implements Subscriber<ModelCollection<T>> {
+class ModelCollection<T:Model> implements Observable<ModelCollection<T>> {
 
   public var length(get, never):Int;
   public function get_length():Int return models.length;

@@ -111,7 +111,7 @@ var TodoApp = function() { };
 TodoApp.__name__ = true;
 TodoApp.main = function() {
 	var store = new todo_model_Store({ todos : new scout_ModelCollection()});
-	store.observers.todos.get().add(new todo_model_Todo({ label : "Hey world!"}));
+	store.states.todos.get().add(new todo_model_Todo({ label : "Hey world!"}));
 	var app = new todo_view_Header({ title : "Todo", store : store});
 	var app1 = new todo_view_App({ sel : "#App"},[app,new todo_view_TodoList({ store : store})]);
 	Scout.mount("#Root",app1);
@@ -544,15 +544,16 @@ scout_Element.prototype = {
 	}
 	,__class__: scout_Element
 };
+var scout_Observable = function() { };
+scout_Observable.__name__ = true;
+scout_Observable.prototype = {
+	__class__: scout_Observable
+};
 var scout_Model = function() { };
 scout_Model.__name__ = true;
+scout_Model.__interfaces__ = [scout_Observable];
 scout_Model.prototype = {
 	__class__: scout_Model
-};
-var scout_Subscriber = function() { };
-scout_Subscriber.__name__ = true;
-scout_Subscriber.prototype = {
-	__class__: scout_Subscriber
 };
 var scout_ModelCollection = function(init) {
 	this.modelListeners = new haxe_ds_ObjectMap();
@@ -565,7 +566,7 @@ var scout_ModelCollection = function(init) {
 	this.models = init != null ? init : [];
 };
 scout_ModelCollection.__name__ = true;
-scout_ModelCollection.__interfaces__ = [scout_Subscriber];
+scout_ModelCollection.__interfaces__ = [scout_Observable];
 scout_ModelCollection.prototype = {
 	get_length: function() {
 		return this.models.length;
@@ -656,13 +657,13 @@ scout_ModelCollection.prototype = {
 	}
 	,__class__: scout_ModelCollection
 };
-var scout_Observable = function() { };
-scout_Observable.__name__ = true;
-scout_Observable.__interfaces__ = [scout_Subscriber];
-scout_Observable.prototype = {
-	__class__: scout_Observable
+var scout_Stateful = function() { };
+scout_Stateful.__name__ = true;
+scout_Stateful.__interfaces__ = [scout_Observable];
+scout_Stateful.prototype = {
+	__class__: scout_Stateful
 };
-var scout_ObservableSubscriber = function(value) {
+var scout_ObservableState = function(value) {
 	var this1 = { slots : []};
 	this.signal = this1;
 	var _gthis = this;
@@ -673,9 +674,9 @@ var scout_ObservableSubscriber = function(value) {
 		});
 	}
 };
-scout_ObservableSubscriber.__name__ = true;
-scout_ObservableSubscriber.__interfaces__ = [scout_Observable];
-scout_ObservableSubscriber.prototype = {
+scout_ObservableState.__name__ = true;
+scout_ObservableState.__interfaces__ = [scout_Stateful];
+scout_ObservableState.prototype = {
 	set: function(value) {
 		var _gthis = this;
 		if(this.value == value) {
@@ -701,30 +702,7 @@ scout_ObservableSubscriber.prototype = {
 	,subscribe: function(cb) {
 		return scout__$Signal_Signal_$Impl_$.add(this.signal,cb);
 	}
-	,__class__: scout_ObservableSubscriber
-};
-var scout_ObservableValue = function(value) {
-	var this1 = { slots : []};
-	this.signal = this1;
-	this.value = value;
-};
-scout_ObservableValue.__name__ = true;
-scout_ObservableValue.__interfaces__ = [scout_Observable];
-scout_ObservableValue.prototype = {
-	set: function(value) {
-		if(this.value == value) {
-			return;
-		}
-		this.value = value;
-		scout__$Signal_Signal_$Impl_$.dispatch(this.signal,this.value);
-	}
-	,get: function() {
-		return this.value;
-	}
-	,subscribe: function(cb) {
-		return scout__$Signal_Signal_$Impl_$.add(this.signal,cb);
-	}
-	,__class__: scout_ObservableValue
+	,__class__: scout_ObservableState
 };
 var scout__$Signal_SignalSlot_$Impl_$ = {};
 scout__$Signal_SignalSlot_$Impl_$.__name__ = true;
@@ -747,8 +725,8 @@ scout__$Signal_Signal_$Impl_$.__name__ = true;
 scout__$Signal_Signal_$Impl_$.observe = function(signal,cb) {
 	scout__$Signal_Signal_$Impl_$.add(signal,cb);
 };
-scout__$Signal_Signal_$Impl_$.ofObservable = function(observable) {
-	return observable.signal;
+scout__$Signal_Signal_$Impl_$.ofStateful = function(state) {
+	return state.signal;
 };
 scout__$Signal_Signal_$Impl_$._new = function() {
 	var this1 = { slots : []};
@@ -787,6 +765,29 @@ scout__$Signal_Signal_$Impl_$.dispatch = function(this1,data) {
 			})([slot.listener]));
 		}
 	}
+};
+var scout_State = function(value) {
+	var this1 = { slots : []};
+	this.signal = this1;
+	this.value = value;
+};
+scout_State.__name__ = true;
+scout_State.__interfaces__ = [scout_Stateful];
+scout_State.prototype = {
+	set: function(value) {
+		if(this.value == value) {
+			return;
+		}
+		this.value = value;
+		scout__$Signal_Signal_$Impl_$.dispatch(this.signal,this.value);
+	}
+	,get: function() {
+		return this.value;
+	}
+	,subscribe: function(cb) {
+		return scout__$Signal_Signal_$Impl_$.add(this.signal,cb);
+	}
+	,__class__: scout_State
 };
 var scout__$Template_RenderResult_$Impl_$ = {};
 scout__$Template_RenderResult_$Impl_$.__name__ = true;
@@ -1109,39 +1110,39 @@ var todo_model_Store = function(props) {
 	var this1 = { slots : []};
 	this.onChange = this1;
 	var _gthis = this;
-	this.observers = { };
-	this.observers.id = new scout_ObservableValue(props.id != null ? props.id : todo_model_Store.__scout_ids++);
-	this.observers.todos = new scout_ObservableSubscriber(props.todos);
-	this.observers.editing = new scout_ObservableValue(props.editing);
-	this.observers.visible = new scout_ObservableValue(props.visible != null ? props.visible : todo_model_VisibleTodos.VisibleAll);
-	this.observers.todosRemaining = new scout_ObservableValue(props.todosRemaining);
-	this.observers.id.subscribe(function(_) {
+	this.states = { };
+	this.states.id = new scout_State(props.id != null ? props.id : todo_model_Store.__scout_ids++);
+	this.states.todos = new scout_ObservableState(props.todos);
+	this.states.editing = new scout_State(props.editing);
+	this.states.visible = new scout_State(props.visible != null ? props.visible : todo_model_VisibleTodos.VisibleAll);
+	this.states.todosRemaining = new scout_State(props.todosRemaining);
+	this.states.id.subscribe(function(_) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.observers.todos.subscribe(function(_1) {
+	this.states.todos.subscribe(function(_1) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.observers.editing.subscribe(function(_2) {
+	this.states.editing.subscribe(function(_2) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.observers.visible.subscribe(function(_3) {
+	this.states.visible.subscribe(function(_3) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.observers.todosRemaining.subscribe(function(_4) {
+	this.states.todosRemaining.subscribe(function(_4) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
 	this.__scout_init_todosRemaining();
-	this.observers.todos.subscribe(function(_5) {
+	this.states.todos.subscribe(function(_5) {
 		_gthis.__scout_init_todosRemaining();
 	});
 };
@@ -1149,39 +1150,39 @@ todo_model_Store.__name__ = true;
 todo_model_Store.__interfaces__ = [scout_Model];
 todo_model_Store.prototype = {
 	get_id: function() {
-		return this.observers.id.get();
+		return this.states.id.get();
 	}
 	,set_id: function(value) {
-		this.observers.id.set(value);
+		this.states.id.set(value);
 		return value;
 	}
 	,get_todos: function() {
-		return this.observers.todos.get();
+		return this.states.todos.get();
 	}
 	,set_todos: function(value) {
-		this.observers.todos.set(value);
+		this.states.todos.set(value);
 		return value;
 	}
 	,get_editing: function() {
-		return this.observers.editing.get();
+		return this.states.editing.get();
 	}
 	,set_editing: function(value) {
-		this.observers.editing.set(value);
+		this.states.editing.set(value);
 		return value;
 	}
 	,get_visible: function() {
-		return this.observers.visible.get();
+		return this.states.visible.get();
 	}
 	,set_visible: function(value) {
-		this.observers.visible.set(value);
+		this.states.visible.set(value);
 		return value;
 	}
 	,get_todosRemaining: function() {
-		return this.observers.todosRemaining.get();
+		return this.states.todosRemaining.get();
 	}
 	,__scout_init_todosRemaining: function() {
-		this.observers.todosRemaining.set(this.observers.todos.get().models.filter(function(todo1) {
-			return !todo1.observers.completed.get();
+		this.states.todosRemaining.set(this.states.todos.get().models.filter(function(todo1) {
+			return !todo1.states.completed.get();
 		}).length);
 	}
 	,subscribe: function(listener) {
@@ -1194,27 +1195,27 @@ var todo_model_Todo = function(props) {
 	var this1 = { slots : []};
 	this.onChange = this1;
 	var _gthis = this;
-	this.observers = { };
-	this.observers.id = new scout_ObservableValue(props.id != null ? props.id : todo_model_Todo.__scout_ids++);
-	this.observers.label = new scout_ObservableValue(props.label);
-	this.observers.completed = new scout_ObservableValue(props.completed != null && props.completed);
-	this.observers.editing = new scout_ObservableValue(props.editing != null && props.editing);
-	this.observers.id.subscribe(function(_) {
+	this.states = { };
+	this.states.id = new scout_State(props.id != null ? props.id : todo_model_Todo.__scout_ids++);
+	this.states.label = new scout_State(props.label);
+	this.states.completed = new scout_State(props.completed != null && props.completed);
+	this.states.editing = new scout_State(props.editing != null && props.editing);
+	this.states.id.subscribe(function(_) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.observers.label.subscribe(function(_1) {
+	this.states.label.subscribe(function(_1) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.observers.completed.subscribe(function(_2) {
+	this.states.completed.subscribe(function(_2) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.observers.editing.subscribe(function(_3) {
+	this.states.editing.subscribe(function(_3) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
@@ -1224,31 +1225,31 @@ todo_model_Todo.__name__ = true;
 todo_model_Todo.__interfaces__ = [scout_Model];
 todo_model_Todo.prototype = {
 	get_id: function() {
-		return this.observers.id.get();
+		return this.states.id.get();
 	}
 	,set_id: function(value) {
-		this.observers.id.set(value);
+		this.states.id.set(value);
 		return value;
 	}
 	,get_label: function() {
-		return this.observers.label.get();
+		return this.states.label.get();
 	}
 	,set_label: function(value) {
-		this.observers.label.set(value);
+		this.states.label.set(value);
 		return value;
 	}
 	,get_completed: function() {
-		return this.observers.completed.get();
+		return this.states.completed.get();
 	}
 	,set_completed: function(value) {
-		this.observers.completed.set(value);
+		this.states.completed.set(value);
 		return value;
 	}
 	,get_editing: function() {
-		return this.observers.editing.get();
+		return this.states.editing.get();
 	}
 	,set_editing: function(value) {
-		this.observers.editing.set(value);
+		this.states.editing.set(value);
 		return value;
 	}
 	,subscribe: function(listener) {
@@ -1258,11 +1259,11 @@ todo_model_Todo.prototype = {
 };
 var todo_view_App = function(attrs,children) {
 	scout_View.call(this);
-	this.observers = { };
-	this.observers.id = new scout_ObservableValue(attrs.id != null ? attrs.id : "App");
-	this.observers.className = new scout_ObservableValue(attrs.className);
-	this.observers.tag = new scout_ObservableValue(attrs.tag != null ? attrs.tag : "div");
-	this.observers.sel = new scout_ObservableValue(attrs.sel);
+	this.states = { };
+	this.states.id = new scout_State(attrs.id != null ? attrs.id : "App");
+	this.states.className = new scout_State(attrs.className);
+	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
+	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
 	this.children = new scout_ViewCollection(this,children);
 	this.delegateEvents(this.events);
@@ -1274,52 +1275,52 @@ todo_view_App.prototype = $extend(scout_View.prototype,{
 		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <section class=\"todoapp\">\r\n      " + this.children.toRenderResult() + "\r\n    </section>\r\n    \r\n    <footer class=\"info\">\r\n      <p>Double-click to edit a todo.</p>\r\n      <p>Written by <a href=\"https://github.com/wartman\">wartman</a></p>\r\n      <p>Part of <a href=\"http://todomvc.com\">TodoMVC</a></p>\r\n    </footer>\r\n  ");
 	}
 	,ensureElement: function() {
-		if(this.observers.sel.get() != null) {
-			this.set_el(window.document.querySelector(this.observers.sel.get()));
+		if(this.states.sel.get() != null) {
+			this.set_el(window.document.querySelector(this.states.sel.get()));
 		}
 		if(this.el == null) {
-			this.set_el(window.document.createElement(this.observers.tag.get()));
-			this.el.setAttribute("id",this.observers.id.get());
+			this.set_el(window.document.createElement(this.states.tag.get()));
+			this.el.setAttribute("id",this.states.id.get());
 		}
 	}
 	,get_id: function() {
-		return this.observers.id.get();
+		return this.states.id.get();
 	}
 	,set_id: function(value) {
-		this.observers.id.set(value);
+		this.states.id.set(value);
 		return value;
 	}
 	,get_className: function() {
-		return this.observers.className.get();
+		return this.states.className.get();
 	}
 	,set_className: function(value) {
-		this.observers.className.set(value);
+		this.states.className.set(value);
 		return value;
 	}
 	,get_tag: function() {
-		return this.observers.tag.get();
+		return this.states.tag.get();
 	}
 	,set_tag: function(value) {
-		this.observers.tag.set(value);
+		this.states.tag.set(value);
 		return value;
 	}
 	,get_sel: function() {
-		return this.observers.sel.get();
+		return this.states.sel.get();
 	}
 	,set_sel: function(value) {
-		this.observers.sel.set(value);
+		this.states.sel.set(value);
 		return value;
 	}
 	,__class__: todo_view_App
 });
 var todo_view_Header = function(attrs,children) {
 	scout_View.call(this);
-	this.observers = { };
-	this.observers.tag = new scout_ObservableValue(attrs.tag != null ? attrs.tag : "header");
-	this.observers.className = new scout_ObservableValue(attrs.className != null ? attrs.className : "header");
-	this.observers.title = new scout_ObservableValue(attrs.title);
-	this.observers.store = new scout_ObservableValue(attrs.store);
-	this.observers.sel = new scout_ObservableValue(attrs.sel);
+	this.states = { };
+	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "header");
+	this.states.className = new scout_State(attrs.className != null ? attrs.className : "header");
+	this.states.title = new scout_State(attrs.title);
+	this.states.store = new scout_State(attrs.store);
+	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
 	this.children = new scout_ViewCollection(this,children);
 	this.events.push({ selector : ".new-todo", action : "keydown", method : $bind(this,this.handleSubmit)});
@@ -1332,74 +1333,74 @@ todo_view_Header.prototype = $extend(scout_View.prototype,{
 		if((js_Boot.__cast(e , KeyboardEvent)).key == "Enter") {
 			e.preventDefault();
 			var target = e.target;
-			this.observers.store.get().observers.todos.get().add(new todo_model_Todo({ label : target.value}));
+			this.states.store.get().states.todos.get().add(new todo_model_Todo({ label : target.value}));
 			target.value = "";
 		}
 	}
 	,template: function() {
-		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <h1>" + StringTools.htmlEscape(Std.string(this.observers.title.get())) + "</h1>\r\n    <input class=\"new-todo\" placeholder=\"What needs doing?\">\r\n  ");
+		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <h1>" + StringTools.htmlEscape(Std.string(this.states.title.get())) + "</h1>\r\n    <input class=\"new-todo\" placeholder=\"What needs doing?\">\r\n  ");
 	}
 	,ensureElement: function() {
-		if(this.observers.sel.get() != null) {
-			this.set_el(window.document.querySelector(this.observers.sel.get()));
+		if(this.states.sel.get() != null) {
+			this.set_el(window.document.querySelector(this.states.sel.get()));
 		}
 		if(this.el == null) {
-			this.set_el(window.document.createElement(this.observers.tag.get()));
-			this.el.setAttribute("class",this.observers.className.get());
+			this.set_el(window.document.createElement(this.states.tag.get()));
+			this.el.setAttribute("class",this.states.className.get());
 		}
 	}
 	,get_tag: function() {
-		return this.observers.tag.get();
+		return this.states.tag.get();
 	}
 	,set_tag: function(value) {
-		this.observers.tag.set(value);
+		this.states.tag.set(value);
 		return value;
 	}
 	,get_className: function() {
-		return this.observers.className.get();
+		return this.states.className.get();
 	}
 	,set_className: function(value) {
-		this.observers.className.set(value);
+		this.states.className.set(value);
 		return value;
 	}
 	,get_title: function() {
-		return this.observers.title.get();
+		return this.states.title.get();
 	}
 	,set_title: function(value) {
-		this.observers.title.set(value);
+		this.states.title.set(value);
 		return value;
 	}
 	,get_store: function() {
-		return this.observers.store.get();
+		return this.states.store.get();
 	}
 	,set_store: function(value) {
-		this.observers.store.set(value);
+		this.states.store.set(value);
 		return value;
 	}
 	,get_sel: function() {
-		return this.observers.sel.get();
+		return this.states.sel.get();
 	}
 	,set_sel: function(value) {
-		this.observers.sel.set(value);
+		this.states.sel.set(value);
 		return value;
 	}
 	,__class__: todo_view_Header
 });
 var todo_view_TodoItem = function(attrs,children) {
 	scout_View.call(this);
-	this.observers = { };
-	this.observers.className = new scout_ObservableValue(attrs.className != null ? attrs.className : "todo-item");
-	this.observers.id = new scout_ObservableValue(attrs.id);
-	this.observers.tag = new scout_ObservableValue(attrs.tag != null ? attrs.tag : "li");
-	this.observers.todo = new scout_ObservableValue(attrs.todo);
-	this.observers.store = new scout_ObservableValue(attrs.store);
-	this.observers.sel = new scout_ObservableValue(attrs.sel);
+	this.states = { };
+	this.states.className = new scout_State(attrs.className != null ? attrs.className : "todo-item");
+	this.states.id = new scout_State(attrs.id);
+	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "li");
+	this.states.todo = new scout_State(attrs.todo);
+	this.states.store = new scout_State(attrs.store);
+	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
 	this.children = new scout_ViewCollection(this,children);
 	this.initializeVisibility();
-	scout__$Signal_Signal_$Impl_$.observe(scout__$Signal_Signal_$Impl_$.ofObservable(this.observers.todo.get().observers.editing),$bind(this,this.toggleEditMode));
-	scout__$Signal_Signal_$Impl_$.observe(scout__$Signal_Signal_$Impl_$.ofObservable(this.observers.store.get().observers.visible),$bind(this,this.isVisible));
-	scout__$Signal_Signal_$Impl_$.observe(scout__$Signal_Signal_$Impl_$.ofObservable(this.observers.todo.get().observers.completed),$bind(this,this.isVisible));
+	scout__$Signal_Signal_$Impl_$.observe(scout__$Signal_Signal_$Impl_$.ofStateful(this.states.todo.get().states.editing),$bind(this,this.toggleEditMode));
+	scout__$Signal_Signal_$Impl_$.observe(scout__$Signal_Signal_$Impl_$.ofStateful(this.states.store.get().states.visible),$bind(this,this.isVisible));
+	scout__$Signal_Signal_$Impl_$.observe(scout__$Signal_Signal_$Impl_$.ofStateful(this.states.todo.get().states.completed),$bind(this,this.isVisible));
 	this.events.push({ selector : ".edit", action : "keydown", method : $bind(this,this.doneEditing)});
 	this.events.push({ selector : ".edit", action : "blur", method : $bind(this,this.bluredEdit)});
 	this.events.push({ selector : null, action : "dblclick", method : $bind(this,this.edit)});
@@ -1411,7 +1412,7 @@ todo_view_TodoItem.__name__ = true;
 todo_view_TodoItem.__super__ = scout_View;
 todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 	initializeVisibility: function() {
-		this.isVisible(this.observers.store.get().observers.visible.get());
+		this.isVisible(this.states.store.get().states.visible.get());
 	}
 	,doneEditing: function(e) {
 		if((js_Boot.__cast(e , KeyboardEvent)).key == "Enter") {
@@ -1423,23 +1424,23 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 		this.update();
 	}
 	,update: function() {
-		this.observers.todo.get().set_label((js_Boot.__cast(this.el.querySelector(".edit") , HTMLInputElement)).value);
-		this.observers.todo.get().set_editing(false);
+		this.states.todo.get().set_label((js_Boot.__cast(this.el.querySelector(".edit") , HTMLInputElement)).value);
+		this.states.todo.get().set_editing(false);
 		this.render();
 	}
 	,edit: function(e) {
-		this.observers.todo.get().set_editing(true);
+		this.states.todo.get().set_editing(true);
 	}
 	,toggleCompleted: function(e) {
 		e.stopPropagation();
-		this.observers.todo.get().set_completed(!this.observers.todo.get().observers.completed.get());
+		this.states.todo.get().set_completed(!this.states.todo.get().states.completed.get());
 	}
 	,removeTodo: function(e) {
 		e.preventDefault();
-		this.observers.store.get().observers.todos.get().remove(this.observers.todo.get());
+		this.states.store.get().states.todos.get().remove(this.states.todo.get());
 	}
 	,toggleEditMode: function(_) {
-		if(this.observers.todo.get().observers.editing.get()) {
+		if(this.states.todo.get().states.editing.get()) {
 			this.el.classList.add("editing");
 			this.el.querySelector(".edit").focus();
 		} else {
@@ -1447,20 +1448,20 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 		}
 	}
 	,isVisible: function(_) {
-		var _g = this.observers.store.get().observers.visible.get();
+		var _g = this.states.store.get().states.visible.get();
 		switch(_g[1]) {
 		case 0:
 			this.show();
 			break;
 		case 1:
-			if(this.observers.todo.get().observers.completed.get()) {
+			if(this.states.todo.get().states.completed.get()) {
 				this.show();
 			} else {
 				this.hide();
 			}
 			break;
 		case 2:
-			if(this.observers.todo.get().observers.completed.get()) {
+			if(this.states.todo.get().states.completed.get()) {
 				this.hide();
 			} else {
 				this.show();
@@ -1475,75 +1476,75 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 		this.el.setAttribute("style","display:none;");
 	}
 	,template: function() {
-		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <input class=\"edit\" type=\"text\" value=\"" + StringTools.htmlEscape(Std.string(this.observers.todo.get().observers.label.get())) + "\" />\r\n    <div class=\"view\">\r\n      <input class=\"toggle\" type=\"checkbox\"" + StringTools.htmlEscape(this.observers.todo.get().observers.completed.get() ? " checked" : "") + " />\r\n      <label>" + StringTools.htmlEscape(Std.string(this.observers.todo.get().observers.label.get())) + "</label>\r\n      <button class=\"destroy\"></button>\r\n    </div>\r\n  ");
+		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <input class=\"edit\" type=\"text\" value=\"" + StringTools.htmlEscape(Std.string(this.states.todo.get().states.label.get())) + "\" />\r\n    <div class=\"view\">\r\n      <input class=\"toggle\" type=\"checkbox\"" + StringTools.htmlEscape(this.states.todo.get().states.completed.get() ? " checked" : "") + " />\r\n      <label>" + StringTools.htmlEscape(Std.string(this.states.todo.get().states.label.get())) + "</label>\r\n      <button class=\"destroy\"></button>\r\n    </div>\r\n  ");
 	}
 	,ensureElement: function() {
-		if(this.observers.sel.get() != null) {
-			this.set_el(window.document.querySelector(this.observers.sel.get()));
+		if(this.states.sel.get() != null) {
+			this.set_el(window.document.querySelector(this.states.sel.get()));
 		}
 		if(this.el == null) {
-			this.set_el(window.document.createElement(this.observers.tag.get()));
-			this.el.setAttribute("id",this.observers.id.get());
-			this.el.setAttribute("class",this.observers.className.get());
+			this.set_el(window.document.createElement(this.states.tag.get()));
+			this.el.setAttribute("id",this.states.id.get());
+			this.el.setAttribute("class",this.states.className.get());
 		}
 	}
 	,get_className: function() {
-		return this.observers.className.get();
+		return this.states.className.get();
 	}
 	,set_className: function(value) {
-		this.observers.className.set(value);
+		this.states.className.set(value);
 		return value;
 	}
 	,get_id: function() {
-		return this.observers.id.get();
+		return this.states.id.get();
 	}
 	,set_id: function(value) {
-		this.observers.id.set(value);
+		this.states.id.set(value);
 		return value;
 	}
 	,get_tag: function() {
-		return this.observers.tag.get();
+		return this.states.tag.get();
 	}
 	,set_tag: function(value) {
-		this.observers.tag.set(value);
+		this.states.tag.set(value);
 		return value;
 	}
 	,get_todo: function() {
-		return this.observers.todo.get();
+		return this.states.todo.get();
 	}
 	,set_todo: function(value) {
-		this.observers.todo.set(value);
+		this.states.todo.set(value);
 		return value;
 	}
 	,get_store: function() {
-		return this.observers.store.get();
+		return this.states.store.get();
 	}
 	,set_store: function(value) {
-		this.observers.store.set(value);
+		this.states.store.set(value);
 		return value;
 	}
 	,get_sel: function() {
-		return this.observers.sel.get();
+		return this.states.sel.get();
 	}
 	,set_sel: function(value) {
-		this.observers.sel.set(value);
+		this.states.sel.set(value);
 		return value;
 	}
 	,__class__: todo_view_TodoItem
 });
 var todo_view_TodoList = function(attrs,children) {
 	scout_View.call(this);
-	this.observers = { };
-	this.observers.className = new scout_ObservableValue(attrs.className != null ? attrs.className : "todo-list-wrapper");
-	this.observers.store = new scout_ObservableValue(attrs.store);
-	this.observers.tag = new scout_ObservableValue(attrs.tag != null ? attrs.tag : "div");
-	this.observers.sel = new scout_ObservableValue(attrs.sel);
+	this.states = { };
+	this.states.className = new scout_State(attrs.className != null ? attrs.className : "todo-list-wrapper");
+	this.states.store = new scout_State(attrs.store);
+	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
+	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
 	this.children = new scout_ViewCollection(this,children);
 	this.initializeViews();
-	scout__$Signal_Signal_$Impl_$.observe(this.observers.store.get().observers.todos.get().onAdd,$bind(this,this.addTodo));
-	scout__$Signal_Signal_$Impl_$.observe(this.observers.store.get().observers.todos.get().onRemove,$bind(this,this.removeTodo));
-	scout__$Signal_Signal_$Impl_$.observe(scout__$Signal_Signal_$Impl_$.ofObservable(this.observers.store.get().observers.todosRemaining),$bind(this,this.updateCount));
+	scout__$Signal_Signal_$Impl_$.observe(this.states.store.get().states.todos.get().onAdd,$bind(this,this.addTodo));
+	scout__$Signal_Signal_$Impl_$.observe(this.states.store.get().states.todos.get().onRemove,$bind(this,this.removeTodo));
+	scout__$Signal_Signal_$Impl_$.observe(scout__$Signal_Signal_$Impl_$.ofStateful(this.states.store.get().states.todosRemaining),$bind(this,this.updateCount));
 	this.events.push({ selector : ".filter-all", action : "click", method : $bind(this,this.filterAll)});
 	this.events.push({ selector : ".filter-completed", action : "click", method : $bind(this,this.filterCompleted)});
 	this.events.push({ selector : ".filter-pending", action : "click", method : $bind(this,this.filterPending)});
@@ -1553,18 +1554,18 @@ todo_view_TodoList.__name__ = true;
 todo_view_TodoList.__super__ = scout_View;
 todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 	initializeViews: function() {
-		var todo1 = this.observers.store.get().observers.todos.get().iterator();
+		var todo1 = this.states.store.get().states.todos.get().iterator();
 		while(todo1.hasNext()) {
 			var todo2 = todo1.next();
 			this.addTodo(todo2);
 		}
 	}
 	,addTodo: function(todo1) {
-		this.addView(new todo_view_TodoItem({ sel : "#Todo-" + todo1.observers.id.get(), id : "Todo-" + todo1.observers.id.get(), todo : todo1, store : this.observers.store.get()}));
+		this.addView(new todo_view_TodoItem({ sel : "#Todo-" + todo1.states.id.get(), id : "Todo-" + todo1.states.id.get(), todo : todo1, store : this.states.store.get()}));
 	}
 	,removeTodo: function(todo1) {
 		var view = this.children.find(function(view1) {
-			return (js_Boot.__cast(view1 , todo_view_TodoItem)).observers.todo.get() == todo1;
+			return (js_Boot.__cast(view1 , todo_view_TodoItem)).states.todo.get() == todo1;
 		});
 		this.removeView(view);
 	}
@@ -1576,52 +1577,52 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 		count.innerHTML = remaining + " Remaining";
 	}
 	,filterAll: function(e) {
-		this.observers.store.get().set_visible(todo_model_VisibleTodos.VisibleAll);
+		this.states.store.get().set_visible(todo_model_VisibleTodos.VisibleAll);
 	}
 	,filterCompleted: function(e) {
-		this.observers.store.get().set_visible(todo_model_VisibleTodos.VisibleCompleted);
+		this.states.store.get().set_visible(todo_model_VisibleTodos.VisibleCompleted);
 	}
 	,filterPending: function(e) {
-		this.observers.store.get().set_visible(todo_model_VisibleTodos.VisiblePending);
+		this.states.store.get().set_visible(todo_model_VisibleTodos.VisiblePending);
 	}
 	,template: function() {
-		return scout__$Template_RenderResult_$Impl_$._new("\r\n    " + this.children.mount("ul",{ className : "todo-list"}) + "\r\n\r\n    <footer class=\"footer\">\r\n      <span class=\"todo-count\">" + StringTools.htmlEscape(Std.string(this.observers.store.get().observers.todosRemaining.get())) + " Remaining</span>\r\n\r\n      <ul class=\"filters\">\r\n        <li><a href=\"#all\" class=\"filter-all\">All</a></li>\r\n        <li><a href=\"#completed\" class=\"filter-completed\">Completed</a></li>\r\n        <li><a href=\"#pending\" class=\"filter-pending\">Pending</a></li>\r\n      </ul>\r\n    </footer>\r\n  ");
+		return scout__$Template_RenderResult_$Impl_$._new("\r\n    " + this.children.mount("ul",{ className : "todo-list"}) + "\r\n\r\n    <footer class=\"footer\">\r\n      <span class=\"todo-count\">" + StringTools.htmlEscape(Std.string(this.states.store.get().states.todosRemaining.get())) + " Remaining</span>\r\n\r\n      <ul class=\"filters\">\r\n        <li><a href=\"#all\" class=\"filter-all\">All</a></li>\r\n        <li><a href=\"#completed\" class=\"filter-completed\">Completed</a></li>\r\n        <li><a href=\"#pending\" class=\"filter-pending\">Pending</a></li>\r\n      </ul>\r\n    </footer>\r\n  ");
 	}
 	,ensureElement: function() {
-		if(this.observers.sel.get() != null) {
-			this.set_el(window.document.querySelector(this.observers.sel.get()));
+		if(this.states.sel.get() != null) {
+			this.set_el(window.document.querySelector(this.states.sel.get()));
 		}
 		if(this.el == null) {
-			this.set_el(window.document.createElement(this.observers.tag.get()));
-			this.el.setAttribute("class",this.observers.className.get());
+			this.set_el(window.document.createElement(this.states.tag.get()));
+			this.el.setAttribute("class",this.states.className.get());
 		}
 	}
 	,get_className: function() {
-		return this.observers.className.get();
+		return this.states.className.get();
 	}
 	,set_className: function(value) {
-		this.observers.className.set(value);
+		this.states.className.set(value);
 		return value;
 	}
 	,get_store: function() {
-		return this.observers.store.get();
+		return this.states.store.get();
 	}
 	,set_store: function(value) {
-		this.observers.store.set(value);
+		this.states.store.set(value);
 		return value;
 	}
 	,get_tag: function() {
-		return this.observers.tag.get();
+		return this.states.tag.get();
 	}
 	,set_tag: function(value) {
-		this.observers.tag.set(value);
+		this.states.tag.set(value);
 		return value;
 	}
 	,get_sel: function() {
-		return this.observers.sel.get();
+		return this.states.sel.get();
 	}
 	,set_sel: function(value) {
-		this.observers.sel.set(value);
+		this.states.sel.set(value);
 		return value;
 	}
 	,__class__: todo_view_TodoList

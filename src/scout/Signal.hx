@@ -23,8 +23,8 @@ abstract Signal<T>({ slots: Array<SignalSlot<T>> }) {
     signal.add(cb);
   }
 
-  @:from public static function ofObservable<T>(observable:Observable<T>):Signal<T> {
-    return observable.signal;
+  @:from public static function ofStateful<T>(state:Stateful<T>):Signal<T> {
+    return state.signal;
   }
 
   public inline function new() {

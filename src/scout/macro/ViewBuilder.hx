@@ -18,7 +18,7 @@ class ViewBuilder {
 
   private var fields:Array<Field>;
   private var attrs:Array<Field> = [];
-  private var observers:Array<Field> = [];
+  private var states:Array<Field> = [];
   private var renderableAttrs:Map<String, String> = new Map();
   private var attrInitializers:Array<Expr> = [];
   private var initializers:Array<Expr> = [];
@@ -70,7 +70,7 @@ class ViewBuilder {
                 renderableAttrs.set(f.name, s);
               case AttrObserve(target):
                 if (target == null) target = 'render';
-                initializers.push(macro this.observers.$name.subscribe(function (_) $i{target}()));
+                initializers.push(macro this.states.$name.subscribe(function (_) $i{target}()));
               case AttrOptional:
                 isOptional = true;
               default:
@@ -154,9 +154,9 @@ class ViewBuilder {
 
   private function generateConstructor(fields:Array<Field>, attrType:ComplexType):Array<Field> {
     fields.push({
-      name: 'observers',
+      name: 'states',
       access: [ APrivate ],
-      kind: FVar(TAnonymous(observers), null),
+      kind: FVar(TAnonymous(states), null),
       pos: Context.currentPos()
     });
 
@@ -169,7 +169,7 @@ class ViewBuilder {
       return fields.concat((macro class {
 
         public function new(attrs:$attrType, ?children:Array<scout.View>) {
-          this.observers = cast {};
+          this.states = cast {};
           $b{attrInitializers};
           ensureElement();
           this.children = new scout.ViewCollection(this, children);
@@ -197,7 +197,7 @@ class ViewBuilder {
     return fields.concat((macro class {
 
       public function new(attrs:$attrType, ?children:Array<scout.View>) {
-        this.observers = cast {};
+        this.states = cast {};
         $b{attrInitializers};
         this.children = new scout.ViewCollection(this, children);
         $b{initializers};
@@ -243,7 +243,7 @@ class ViewBuilder {
       kind: FFun({
         ret: ret,
         args: [],
-        expr: macro return this.observers.$name.get()
+        expr: macro return this.states.$name.get()
       }),
       access: [ AInline, APublic ],
       pos: pos
@@ -257,7 +257,7 @@ class ViewBuilder {
         ret: ret,
         args: [ { name:'value', type:ret } ],
         expr: macro {
-          this.observers.$name.set(value);
+          this.states.$name.set(value);
           return value;
         }
       }),
@@ -275,16 +275,16 @@ class ViewBuilder {
       pos: pos
     });
 
-    observers.push({
+    states.push({
       name: name,
-      kind: FVar(macro:scout.Observable<$t>, null),
+      kind: FVar(macro:scout.Stateful<$t>, null),
       access: [ APublic ],
       meta: [],
       pos: pos
     });
 
     var init = e != null ? macro attrs.$name != null ? attrs.$name : ${e} : macro attrs.$name;
-    attrInitializers.push(macro this.observers.$name = new scout.ObservableValue(${init}));
+    attrInitializers.push(macro this.states.$name = new scout.State(${init}));
   }
 
   private function extractAttrOptions(meta:MetadataEntry):Array<AttrOptions> {

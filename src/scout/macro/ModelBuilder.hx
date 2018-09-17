@@ -21,8 +21,8 @@ class ModelBuilder {
   private var fields:Array<Field>;
   private var newFields:Array<Field> = [];
   private var props:Array<Field> = [];
-  private var observers:Array<Field> = [];
-  private var obsInitializers:Array<Expr> = [];
+  private var states:Array<Field> = [];
+  private var stateInitializers:Array<Expr> = [];
   private var initializers:Array<Expr> = [];
 
   public function new(c:ClassType, fields:Array<Field>) {
@@ -72,7 +72,7 @@ class ModelBuilder {
             newFields.push(makeSetter(f.name, t, f.pos));
 
             var propName = f.name;
-            observers.push(makeObserver(f.name, t, e, f.pos));
+            states.push(makeState(f.name, t, e, f.pos));
 
             return false;
           }
@@ -91,17 +91,17 @@ class ModelBuilder {
               kind: FFun({
                 ret: (macro:Void),
                 args: [],
-                expr: macro this.observers.$fieldName.set(${e})
+                expr: macro this.states.$fieldName.set(${e})
               }),
               pos: Context.currentPos()
             });
-            observers.push(makeObserver(f.name, t, null, f.pos));
+            states.push(makeState(f.name, t, null, f.pos));
             initializers.push(macro this.$initializer());
             watch.foreach(function (f) {
               switch (f.expr) {
                 case EConst(c): switch (c) {
                   case CString(s) | CIdent(s):
-                    initializers.push(macro this.observers.$s.subscribe(function (_) {
+                    initializers.push(macro this.states.$s.subscribe(function (_) {
                       this.$initializer();
                     }));
                   default:
@@ -151,18 +151,18 @@ class ModelBuilder {
 
   private function addImplFields() {
     var propsType = TAnonymous(props);
-    var observersType = TAnonymous(observers);
+    var statesType = TAnonymous(states);
     var localType = TPath({ pack: c.pack, name: c.name });
 
     newFields = newFields.concat((macro class {
 
-      public var observers(default, null):$observersType;
+      public var states(default, null):$statesType;
       public var onChange(default, null):scout.Signal<$localType> = new scout.Signal();
       private var silent:Bool = false;
 
       public function new(props:$propsType) {
-        this.observers = cast {};
-        $b{obsInitializers};
+        this.states = cast {};
+        $b{stateInitializers};
         $b{initializers};
       }
 
@@ -198,7 +198,7 @@ class ModelBuilder {
       kind: FFun({
         ret: ret,
         args: [],
-        expr: macro return this.observers.$name.get()
+        expr: macro return this.states.$name.get()
       }),
       meta: [ { name: ':keep', pos:Context.currentPos() } ],
       access: [ AInline, APublic ],
@@ -213,7 +213,7 @@ class ModelBuilder {
         ret: t,
         args: [ { name: 'value', type: t } ],
         expr: macro {
-          this.observers.$name.set(value);
+          this.states.$name.set(value);
           return value;
         }
       }),
@@ -223,26 +223,22 @@ class ModelBuilder {
     };
   }
 
-  private function makeObserver(name:String, type:ComplexType, ?e:Expr, pos:Position):Field {
+  private function makeState(name:String, type:ComplexType, ?e:Expr, pos:Position):Field {
     var obs = {
       name: name,
-      kind: FVar( TPath({
-        pack: [ 'scout' ],
-        name: 'Observable',
-        params: [ TPType(type) ]
-      }) ),
+      kind: FVar(macro:scout.Stateful<$type>),
       access: [ APublic ],
       pos: pos
     };
     var init = e != null ? macro props.$name != null ? props.$name : ${e} : macro props.$name;
-    if (isSubscriber(Context.getType(type.toString()))) {
-      obsInitializers.push(macro this.observers.$name = new scout.ObservableSubscriber(${init}));
+    if (isObservable(Context.getType(type.toString()))) {
+      stateInitializers.push(macro this.states.$name = new scout.ObservableState(${init}));
     } else { 
-      obsInitializers.push(macro this.observers.$name = new scout.ObservableValue(${init}));
+      stateInitializers.push(macro this.states.$name = new scout.State(${init}));
     }
 
     initializers.push(macro {
-      this.observers.$name.subscribe(function (_) {
+      this.states.$name.subscribe(function (_) {
         if (!this.silent) this.onChange.dispatch(this);
       });
     });
@@ -250,17 +246,17 @@ class ModelBuilder {
     return obs;
   }
 
-  private function isSubscriber(type:haxe.macro.Type) switch (type) {
+  private function isObservable(type:haxe.macro.Type) switch (type) {
     case TType(t, p):
-      return isSubscriber(t.get().type);
+      return isObservable(t.get().type);
     case TInst(t, p):
       var cls = t.get();
       var interfaces = cls.interfaces;
       for (i in interfaces) {
-        if (i.t.toString() == 'scout.Subscriber') return true;
+        if (i.t.toString() == 'scout.Observable') return true;
       }
       if (cls.superClass != null) {
-        return isSubscriber(Context.getType(cls.superClass.t.toString()));
+        return isObservable(Context.getType(cls.superClass.t.toString()));
       }
       return false;
     default: return false;

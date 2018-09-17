@@ -54,8 +54,8 @@ class ModelTest extends TestCase {
     });
     var nameChanged = 0;
     var valueChanged = 0;
-    simple.observers.name.subscribe(function (_) nameChanged++);
-    simple.observers.value.subscribe(function (_) valueChanged++);
+    simple.states.name.subscribe(function (_) nameChanged++);
+    simple.states.value.subscribe(function (_) valueChanged++);
 
     simple.name = 'one';
     simple.name = 'two';
@@ -74,7 +74,7 @@ class ModelTest extends TestCase {
       bar: 'bar'
     });
     var fooBarChanged = 0;
-    computed.observers.fooBar.subscribe(function (_) fooBarChanged++);
+    computed.states.fooBar.subscribe(function (_) fooBarChanged++);
 
     assertEquals('foobar', computed.fooBar);
     computed.foo = 'changed';

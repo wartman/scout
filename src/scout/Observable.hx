@@ -1,7 +1,7 @@
 package scout;
 
-interface Observable<T> extends Subscriber<T> {
-  public var signal(default, never):Signal<T>;
-  public function get():T;
-  public function set(value:T):Void;    
+import scout.Signal;
+
+interface Observable<T> {
+  public function subscribe(cb:T->Void):SignalSlot<T>;
 }

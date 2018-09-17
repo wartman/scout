@@ -19,6 +19,14 @@ abstract SignalSlot<T>({ listener:T->Void, signal:Signal<T>, once:Bool }) {
 
 abstract Signal<T>({ slots: Array<SignalSlot<T>> }) {
 
+  public static function observe<T>(signal:Signal<T>, cb:T->Void) {
+    signal.add(cb);
+  }
+
+  @:from public static function ofObservable<T>(observable:Observable<T>):Signal<T> {
+    return observable.signal;
+  }
+
   public inline function new() {
     this = { slots: [] };
   }

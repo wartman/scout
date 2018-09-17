@@ -54,8 +54,8 @@ class ModelTest extends TestCase {
     });
     var nameChanged = 0;
     var valueChanged = 0;
-    simple.signals.name.add(function (_) nameChanged++);
-    simple.signals.value.add(function (_) valueChanged++);
+    simple.observers.name.subscribe(function (_) nameChanged++);
+    simple.observers.value.subscribe(function (_) valueChanged++);
 
     simple.name = 'one';
     simple.name = 'two';
@@ -74,7 +74,7 @@ class ModelTest extends TestCase {
       bar: 'bar'
     });
     var fooBarChanged = 0;
-    computed.signals.fooBar.add(function (_) fooBarChanged++);
+    computed.observers.fooBar.subscribe(function (_) fooBarChanged++);
 
     assertEquals('foobar', computed.fooBar);
     computed.foo = 'changed';

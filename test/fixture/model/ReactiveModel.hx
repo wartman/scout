@@ -8,7 +8,7 @@ class ReactiveModel implements Model {
   @:prop var foo:String;
   public var changed:Int = 0;
 
-  @:observe(signals.foo)
+  @:observe(observers.foo)
   public function whenFooChanges(foo:String) {
     changed++;
   }

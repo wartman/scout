@@ -56,7 +56,7 @@ class TodoItem extends View {
   }
 
   @:js
-  @:observe(todo.signals.editing)
+  @:observe(todo.observers.editing)
   public function toggleEditMode(_) {
     if (todo.editing) {
       el.classList.add('editing');
@@ -67,8 +67,8 @@ class TodoItem extends View {
   }
 
   @:js
-  @:observe(store.signals.visible)
-  @:observe(todo.signals.completed)
+  @:observe(store.observers.visible)
+  @:observe(todo.observers.completed)
   public function isVisible(_:Dynamic) {
     switch (store.visible) {
       case VisibleAll: show();

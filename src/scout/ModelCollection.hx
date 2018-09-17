@@ -2,7 +2,7 @@ package scout;
 
 using Lambda;
 
-class ModelCollection<T:Model> {
+class ModelCollection<T:Model> implements Subscriber<ModelCollection<T>> {
 
   public var length(get, never):Int;
   public function get_length():Int return models.length;
@@ -17,8 +17,7 @@ class ModelCollection<T:Model> {
   }
 
   public function subscribe(cb:ModelCollection<T>->Void) {
-    onChange.add(cb);
-    return this;
+    return onChange.add(cb);
   }
 
   public function add(model:T) {

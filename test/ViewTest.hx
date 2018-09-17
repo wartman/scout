@@ -80,6 +80,14 @@ class ViewTest extends TestCase {
     assertEquals('<section data-foo="foo" id="Foo" class="foo">bar</section>'.clean(), view.content.clean());
   }
 
+  public function testState() {
+    var view = new StatefulView({ state: false });
+    view.render();
+    assertEquals('<div>off</div>', view.content);
+    view.state = true;
+    assertEquals('<div>on</div>', view.content);
+  }
+
   #if js
 
     public function testReal() {
@@ -95,7 +103,7 @@ class ViewTest extends TestCase {
         name: 'Two',
         value: 'Waiting...'
       });
-      model.signals.name.add(function (value) {
+      model.observers.name.subscribe(function (value) {
         model2.value = 'Model 1 name: ' + value;
       });
       

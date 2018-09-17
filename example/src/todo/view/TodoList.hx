@@ -33,7 +33,7 @@ class TodoList extends View {
   }
 
   @:js
-  @:observe(store.signals.todosRemaining)
+  @:observe(store.observers.todosRemaining)
   private function updateCount(remaining:Int) {
     var count = el.querySelector('.todo-count');
     if (count == null) return;

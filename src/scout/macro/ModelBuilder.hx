@@ -21,7 +21,8 @@ class ModelBuilder {
   private var fields:Array<Field>;
   private var newFields:Array<Field> = [];
   private var props:Array<Field> = [];
-  private var signals:Array<Field> = [];
+  private var observers:Array<Field> = [];
+  private var obsInitializers:Array<Expr> = [];
   private var initializers:Array<Expr> = [];
 
   public function new(c:ClassType, fields:Array<Field>) {
@@ -69,18 +70,9 @@ class ModelBuilder {
             newFields.push(makeProp(f.name, t, f.pos));
             newFields.push(makeGetter(f.name, t, f.pos));
             newFields.push(makeSetter(f.name, t, f.pos));
-            signals.push(makeSignal(f.name, t, f.pos));
 
             var propName = f.name;
-            if (e != null) {
-              initializers.push(macro if (props.$propName == null) {
-                this.$propName = ${e}
-              } else {
-                this.$propName = props.$propName;
-              });
-            } else {
-              initializers.push(macro this.$propName = props.$propName);
-            }
+            observers.push(makeObserver(f.name, t, e, f.pos));
 
             return false;
           }
@@ -99,19 +91,18 @@ class ModelBuilder {
               kind: FFun({
                 ret: (macro:Void),
                 args: [],
-                expr: macro this.props.$fieldName = ${e}
+                expr: macro this.observers.$fieldName.set(${e})
               }),
               pos: Context.currentPos()
             });
-            signals.push(makeSignal(f.name, t, f.pos));
+            observers.push(makeObserver(f.name, t, null, f.pos));
             initializers.push(macro this.$initializer());
             watch.foreach(function (f) {
               switch (f.expr) {
                 case EConst(c): switch (c) {
                   case CString(s) | CIdent(s):
-                    initializers.push(macro this.signals.$s.add(function (_) {
+                    initializers.push(macro this.observers.$s.subscribe(function (_) {
                       this.$initializer();
-                      this.signals.$fieldName.dispatch(this.$fieldName);
                     }));
                   default:
                     throw new Error('Only strings or identifiers are allowed in :computed', f.pos);
@@ -135,7 +126,7 @@ class ModelBuilder {
             for (meta in metas) {
               var expr = meta.params[0];
               f.meta.remove(meta);
-              initializers.push(macro @:pos(f.pos) ${expr}.add(this.$name));
+              initializers.push(macro @:pos(f.pos) scout.Signal.observe(${expr}, this.$name));
             }
           }
           
@@ -160,24 +151,19 @@ class ModelBuilder {
 
   private function addImplFields() {
     var propsType = TAnonymous(props);
-    var signalsType = TAnonymous(signals);
+    var observersType = TAnonymous(observers);
     var localType = TPath({ pack: c.pack, name: c.name });
 
     newFields = newFields.concat((macro class {
 
-      public var props(default, null):$propsType;
-      public var signals(default, null):$signalsType;
+      public var observers(default, null):$observersType;
       public var onChange(default, null):scout.Signal<$localType> = new scout.Signal();
       private var silent:Bool = false;
 
       public function new(props:$propsType) {
-        this.props = cast {};
-        this.signals = cast {};
-        $b{ signals.map(function (field) {
-          var name = field.name;
-          return macro this.signals.$name = new scout.Signal();
-        }) };
-        $b{ initializers };
+        this.observers = cast {};
+        $b{obsInitializers};
+        $b{initializers};
       }
 
       public function subscribe(listener:scout.Model->Void):scout.Signal.SignalSlot<Model> {
@@ -212,7 +198,7 @@ class ModelBuilder {
       kind: FFun({
         ret: ret,
         args: [],
-        expr: macro return this.props.$name
+        expr: macro return this.observers.$name.get()
       }),
       meta: [ { name: ':keep', pos:Context.currentPos() } ],
       access: [ AInline, APublic ],
@@ -221,37 +207,13 @@ class ModelBuilder {
   }
 
   private function makeSetter(name:String, t:ComplexType, pos:Position):Field {
-    var watch:Array<Expr> = [];
-
-    switch (t) {
-      case TPath(p):
-        // Todo: find a better method that allows subclasses
-        if (p.name.indexOf('Collection') >= 0) {
-          watch.push(macro this.props.$name.subscribe(function (c) {
-            this.signals.$name.dispatch(c);
-            if (!silent) {
-              this.onChange.dispatch(this);
-            }
-          }));
-        }
-      default:
-    }
-
     return {
       name: 'set_${name}',
       kind: FFun({
         ret: t,
         args: [ { name: 'value', type: t } ],
         expr: macro {
-          if (this.props.$name == value) {
-            return value;
-          }
-          this.props.$name = value;
-          this.signals.$name.dispatch(value);
-          if (!silent) {
-            this.onChange.dispatch(this);
-          }
-          $b{watch};
+          this.observers.$name.set(value);
           return value;
         }
       }),
@@ -261,17 +223,47 @@ class ModelBuilder {
     };
   }
 
-  private function makeSignal(name:String, type:ComplexType, pos:Position):Field {
-    return {
+  private function makeObserver(name:String, type:ComplexType, ?e:Expr, pos:Position):Field {
+    var obs = {
       name: name,
       kind: FVar( TPath({
         pack: [ 'scout' ],
-        name: 'Signal',
+        name: 'Observable',
         params: [ TPType(type) ]
       }) ),
       access: [ APublic ],
       pos: pos
     };
+    var init = e != null ? macro props.$name != null ? props.$name : ${e} : macro props.$name;
+    if (isSubscriber(Context.getType(type.toString()))) {
+      obsInitializers.push(macro this.observers.$name = new scout.ObservableSubscriber(${init}));
+    } else { 
+      obsInitializers.push(macro this.observers.$name = new scout.ObservableValue(${init}));
+    }
+
+    initializers.push(macro {
+      this.observers.$name.subscribe(function (_) {
+        if (!this.silent) this.onChange.dispatch(this);
+      });
+    });
+
+    return obs;
+  }
+
+  private function isSubscriber(type:haxe.macro.Type) switch (type) {
+    case TType(t, p):
+      return isSubscriber(t.get().type);
+    case TInst(t, p):
+      var cls = t.get();
+      var interfaces = cls.interfaces;
+      for (i in interfaces) {
+        if (i.t.toString() == 'scout.Subscriber') return true;
+      }
+      if (cls.superClass != null) {
+        return isSubscriber(Context.getType(cls.superClass.t.toString()));
+      }
+      return false;
+    default: return false;
   }
 
   private function extractPropOptions(meta:MetadataEntry):Array<PropOptions> {

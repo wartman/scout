@@ -74,19 +74,29 @@ class View {
     return this;
   }
 
+  public function shouldRender():Bool {
+    return true;
+  }
+
+  public function render() {
+    if (shouldRender()) {
+      beforeRender.dispatch(this);
+      #if js
+        el.innerHTML = template();
+      #else
+        content = generateHtml();
+      #end
+      afterRender.dispatch(this);
+    }
+    return this;
+  }
+
   #if js
 
     public inline function remove() {
       onRemove.dispatch(this);
       undelegateEvents();
       el.remove();
-    }
-
-    public function render() {
-      beforeRender.dispatch(this);
-      el.innerHTML = template();
-      afterRender.dispatch(this);
-      return this;
     }
 
     public function delegateEvents(events:Array<ViewEvent>) {
@@ -104,13 +114,6 @@ class View {
     }
 
   #else
-    
-    public function render() {
-      beforeRender.dispatch(this);
-      content = generateHtml();
-      afterRender.dispatch(this);
-      return this;
-    }
 
     private function generateHtml() {
       return template();

@@ -3,6 +3,8 @@ typedef Model = scout.Model;
 typedef ModelCollection<T:Model> = scout.ModelCollection<T>; 
 typedef Template = scout.Template;
 typedef Element = scout.Element;
+typedef Child<T:View> = scout.Child<T>;
+typedef RenderResult = scout.RenderResult;
 #if js
   typedef Dom = scout.Dom;
 #end

@@ -9,6 +9,24 @@ class ViewTest extends TestCase {
   public static function clean(content:String) {
     return content.replace('\n', '').replace('\r', '').replace(' ', '').trim();
   }
+  
+  #if js
+
+    public function testReal() {
+      assertTrue(true);
+      var view = new WithConstructorChildrenView({
+        body: new scout.component.ChildrenView({
+          body: [
+            cast new ChildView({ message: 'Hey' }),
+            cast new ChildView({ message: 'World' })
+          ]
+        })
+      });
+      view.render();
+      js.Browser.document.querySelector('#Root').appendChild(view.el);
+    }
+
+  #end
 
   public function testConstructor() {
     var foo = new AttrsView({
@@ -52,10 +70,14 @@ class ViewTest extends TestCase {
   }
 
   public function testAddChildrenViaConstructor() {
-    var view = new WithConstructorChildrenView({}, [
-      new ChildView({ message: 'Hey' }),
-      new ChildView({ message: 'World' })
-    ]);
+    var view = new WithConstructorChildrenView({
+      body: new scout.component.ChildrenView({
+        body: [
+          cast new ChildView({ message: 'Hey' }),
+          cast new ChildView({ message: 'World' })
+        ]
+      })
+    });
     view.render();
     assertEquals(
       '<div>
@@ -87,56 +109,5 @@ class ViewTest extends TestCase {
     view.state = true;
     assertEquals('<div>on</div>', view.content);
   }
-
-  #if js
-
-    public function testReal() {
-      assertTrue(true);
-      
-      var model = new SimpleModel({
-        id: 1,
-        name: 'One',
-        value: 'bar'
-      });
-      var model2 = new SimpleModel({
-        id: 2,
-        name: 'Two',
-        value: 'Waiting...'
-      });
-      model.states.name.subscribe(function (value) {
-        model2.value = 'Model 1 name: ' + value;
-      });
-      
-      var interactiveView = new InteractiveTestView({
-        sel: '#Root',
-        model: model
-      }, [
-
-        new AttrsView({
-          location: 'The Internet'
-        }),
-        
-        new WithConstructorChildrenView({}, [
-          new ChildView({ message: 'Hey' }),
-          new ChildView({ message: 'World' }),
-          new ChildView({ message: 'How are kicks' })
-        ]),
-
-        new WithModelView({ model: model2 }),
-        new WithModelView({ model: model }),
-
-        new WithCollectionView({
-          collection: new scout.ModelCollection([
-            model,
-            model2
-          ])
-        })
-
-      ]);
-
-      interactiveView.render();
-    }
-
-  #end
 
 }

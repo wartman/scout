@@ -6,8 +6,7 @@ class TemplateTest extends TestCase {
   public function testEscape() {
     var unsafe = '<script>alert("oh noes");</script>';
     var expected = html('<div>This is ok:${unsafe}</div>');
-    assertEquals('<div>This is ok:&lt;script&gt;alert("oh noes");&lt;/script&gt;</div>'
-, expected);
+    assertEquals('<div>This is ok:&lt;script&gt;alert("oh noes");&lt;/script&gt;</div>', expected);
   }
 
   public function testDoesNotEscapeNestedTemplates() {
@@ -34,7 +33,7 @@ class TemplateTest extends TestCase {
   public function testArraysFromVarOfRenderResult() {
     var a = 'a';
     var b = 'b';
-    var data:Array<scout.Template.RenderResult> = [ a, b, '<p>c</p>' ];
+    var data:Array<scout.RenderResult> = [ a, b, '<p>c</p>' ];
     var actual = html('<p>${data}</p>');
     assertEquals('<p>ab<p>c</p></p>', actual);
   }

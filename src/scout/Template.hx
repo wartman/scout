@@ -8,20 +8,6 @@ package scout;
   using haxe.macro.MacroStringTools;
 #end
 
-interface Renderable {
-  public function toRenderResult():RenderResult;
-}
-
-@:forward
-abstract RenderResult(String) from String to String {
-
-  public function new(str) this = str;
-
-  @:from public static function ofRenderable(renderable:Renderable)
-    return renderable.toRenderResult();
-
-}
-
 private class SafeContent implements Renderable {
 
   private var content:String;
@@ -51,46 +37,46 @@ class Template {
         case EConst(CString(s)):
           var expr = s.formatString(data.pos);
           var out = handle(expr);
-          return macro @:pos(data.pos) new scout.Template.RenderResult(${out});
+          return macro @:pos(data.pos) new scout.RenderResult(${out});
         default:
       }
-      return macro @:pos(data.pos) new scout.Template.RenderResult(${data});
+      return macro @:pos(data.pos) new scout.RenderResult(${data});
     }
 
     private static function handle(expr:Expr):Expr {
-      switch (Context.typeof(expr)) {
+      var type = Context.typeof(expr).follow();
+      var renderable = Context.getType('scout.Renderable');
+      if (Context.unify(type, renderable)) {
+        return macro @:pos(expr.pos) ${expr}.toRenderResult();
+      }
+
+      switch (type) {
         case TAbstract(t, _):
           if (t.toString() == 'scout.RenderResult') return expr;
         case TInst(t, params):
           if (t.toString() == 'Array') {
-            if (params[0].toString() == 'scout.RenderResult') 
-              return macro @:pos(expr.pos) new scout.Template.RenderResult(${expr}.join(''));
+            if (params[0].follow().toString() == 'scout.RenderResult') 
+              return macro @:pos(expr.pos) new scout.RenderResult(${expr}.join(''));
+            else if (Context.unify(params[0].follow(), renderable))
+              return macro @:pos(expr.pos) ${expr}.map(function (r) return r.toRenderResult()).join('');
             else
               return macro @:pos(expr.pos) ${expr}.map(function (s) { 
-                if (Std.is(s, scout.Template.Renderable)) {
-                  return cast(s, scout.Template.Renderable).toRenderResult();
+                if (Std.is(s, scout.Renderable)) {
+                  return cast(s, scout.Renderable).toRenderResult();
                 } else {
                   return StringTools.htmlEscape(Std.string(s));
                 }
               }).join('');
           }
-          
-          // Note: this may not be needed, but I'm keeping it here
-          //       for the moment.
-          if (t.toString() == 'scout.ViewCollection') {
-            return macro @:pos(expr.pos) ${expr}.toRenderResult();
-          }
 
-          // Note: will need to make this more robust and check up
-          //       the inheritance chain.
-          if (t.toString() != 'String') {
-            var interfaces = Context.getType(t.toString()).getClass().interfaces;
-            for (i in interfaces) {
-              if (i.t.toString() == 'scout.Renderable') {
-                return macro @:pos(expr.pos) ${expr}.toRenderResult();
-              }
-            }
-          }
+          // if (t.toString() != 'String') {
+          //   var interfaces = Context.getType(t.toString()).getClass().interfaces;
+          //   for (i in interfaces) {
+          //     if (i.t.toString() == 'scout.Renderable') {
+          //       return macro @:pos(expr.pos) ${expr}.toRenderResult();
+          //     }
+          //   }
+          // }
         default:
       }
       switch (expr.expr) {

@@ -8,14 +8,6 @@ function $extend(from, fields) {
 }
 var HxOverrides = function() { };
 HxOverrides.__name__ = true;
-HxOverrides.remove = function(a,obj) {
-	var i = a.indexOf(obj);
-	if(i == -1) {
-		return false;
-	}
-	a.splice(i,1);
-	return true;
-};
 HxOverrides.iter = function(a) {
 	return { cur : 0, arr : a, hasNext : function() {
 		return this.cur < this.arr.length;
@@ -112,9 +104,8 @@ TodoApp.__name__ = true;
 TodoApp.main = function() {
 	var store = new todo_model_Store({ todos : new scout_ModelCollection()});
 	store.states.todos.get().add(new todo_model_Todo({ label : "Hey world!"}));
-	var app = new todo_view_Header({ title : "Todo", store : store});
-	var app1 = new todo_view_App({ sel : "#App"},[app,new todo_view_TodoList({ store : store})]);
-	Scout.mount("#Root",app1);
+	var app = new todo_view_App({ sel : "#App", body : [new todo_view_Header({ title : "Todo", store : store}),new todo_view_TodoList({ store : store})]});
+	Scout.mount("#Root",app);
 };
 var haxe_IMap = function() { };
 haxe_IMap.__name__ = true;
@@ -411,6 +402,80 @@ js_Boot.__isNativeObj = function(o) {
 js_Boot.__resolveNativeClass = function(name) {
 	return $global[name];
 };
+var scout_Observable = function() { };
+scout_Observable.__name__ = true;
+scout_Observable.prototype = {
+	__class__: scout_Observable
+};
+var scout_Stateful = function() { };
+scout_Stateful.__name__ = true;
+scout_Stateful.__interfaces__ = [scout_Observable];
+scout_Stateful.prototype = {
+	__class__: scout_Stateful
+};
+var scout_Renderable = function() { };
+scout_Renderable.__name__ = true;
+scout_Renderable.prototype = {
+	__class__: scout_Renderable
+};
+var scout_Child = function(parent,view) {
+	this.cid = "__scout_proxy_" + scout_Child.ids++;
+	var this1 = { slots : []};
+	this.signal = this1;
+	var _gthis = this;
+	this.parent = parent;
+	this.view = view;
+	scout__$Signal_Signal_$Impl_$.add(this.parent.onRemove,function(_) {
+		_gthis.remove();
+	});
+	scout__$Signal_Signal_$Impl_$.add(this.parent.beforeRender,function(_1) {
+		_gthis.detach();
+	});
+	scout__$Signal_Signal_$Impl_$.add(this.parent.afterRender,function(_2) {
+		_gthis.attach();
+	});
+};
+scout_Child.__name__ = true;
+scout_Child.__interfaces__ = [scout_Stateful,scout_Renderable];
+scout_Child.prototype = {
+	subscribe: function(cb) {
+		return scout__$Signal_Signal_$Impl_$.add(this.signal,cb);
+	}
+	,set: function(value) {
+		if(this.view == value) {
+			return;
+		}
+		this.remove();
+		this.view = value;
+		this.attach();
+		scout__$Signal_Signal_$Impl_$.dispatch(this.signal,this.view);
+	}
+	,get: function() {
+		this.view.doToRenderResult = $bind(this,this.toRenderResult);
+		return this.view;
+	}
+	,remove: function() {
+		var _this = this.view;
+		scout__$Signal_Signal_$Impl_$.dispatch(_this.onRemove,_this);
+		_this.undelegateEvents();
+		_this.el.remove();
+	}
+	,attach: function() {
+		var target = this.parent.el.querySelector("#" + this.cid);
+		if(target != null) {
+			target.parentNode.replaceChild(this.view.render().el,target);
+		}
+	}
+	,detach: function() {
+		if(this.view.el.parentElement != null) {
+			this.view.el.parentElement.removeChild(this.view.el);
+		}
+	}
+	,toRenderResult: function() {
+		return scout__$RenderResult_RenderResult_$Impl_$._new("<div id=\"" + StringTools.htmlEscape(Std.string(this.cid)) + "\"></div>");
+	}
+	,__class__: scout_Child
+};
 var scout_Dom = function() { };
 scout_Dom.__name__ = true;
 scout_Dom.delegate = function(el,selector,type,cb,useCapture) {
@@ -449,11 +514,6 @@ scout_Dom.closest = function(el,selector) {
 scout_Dom.html = function(el,html) {
 	el.innerHTML = html;
 	return el;
-};
-var scout_Renderable = function() { };
-scout_Renderable.__name__ = true;
-scout_Renderable.prototype = {
-	__class__: scout_Renderable
 };
 var scout_Element = function(tag,attrs,children) {
 	this.children = [];
@@ -508,14 +568,10 @@ scout_Element.prototype = {
 	}
 	,render: function() {
 		if(this.children.length == 0 && scout_Element.voidTags.indexOf(this.tag) >= 0) {
-			return scout__$Template_RenderResult_$Impl_$._new("<" + this.tag + this.renderAttrs() + "/>");
+			return scout__$RenderResult_RenderResult_$Impl_$._new("<" + this.tag + this.renderAttrs() + "/>");
 		}
-		return scout__$Template_RenderResult_$Impl_$._new("<" + this.tag + this.renderAttrs() + ">" + this.children.map(function(s) {
-			if(js_Boot.__instanceof(s,scout_Renderable)) {
-				return (js_Boot.__cast(s , scout_Renderable)).toRenderResult();
-			} else {
-				return StringTools.htmlEscape(Std.string(s));
-			}
+		return scout__$RenderResult_RenderResult_$Impl_$._new("<" + this.tag + this.renderAttrs() + ">" + this.children.map(function(r) {
+			return r.toRenderResult();
 		}).join("") + "</" + this.tag + ">");
 	}
 	,renderAttrs: function() {
@@ -543,11 +599,6 @@ scout_Element.prototype = {
 		return this.render();
 	}
 	,__class__: scout_Element
-};
-var scout_Observable = function() { };
-scout_Observable.__name__ = true;
-scout_Observable.prototype = {
-	__class__: scout_Observable
 };
 var scout_Model = function() { };
 scout_Model.__name__ = true;
@@ -657,12 +708,6 @@ scout_ModelCollection.prototype = {
 	}
 	,__class__: scout_ModelCollection
 };
-var scout_Stateful = function() { };
-scout_Stateful.__name__ = true;
-scout_Stateful.__interfaces__ = [scout_Observable];
-scout_Stateful.prototype = {
-	__class__: scout_Stateful
-};
 var scout_ObservableState = function(value) {
 	var this1 = { slots : []};
 	this.signal = this1;
@@ -703,6 +748,15 @@ scout_ObservableState.prototype = {
 		return scout__$Signal_Signal_$Impl_$.add(this.signal,cb);
 	}
 	,__class__: scout_ObservableState
+};
+var scout__$RenderResult_RenderResult_$Impl_$ = {};
+scout__$RenderResult_RenderResult_$Impl_$.__name__ = true;
+scout__$RenderResult_RenderResult_$Impl_$._new = function(str) {
+	var this1 = str;
+	return this1;
+};
+scout__$RenderResult_RenderResult_$Impl_$.ofRenderable = function(renderable) {
+	return renderable.toRenderResult();
 };
 var scout__$Signal_SignalSlot_$Impl_$ = {};
 scout__$Signal_SignalSlot_$Impl_$.__name__ = true;
@@ -789,15 +843,6 @@ scout_State.prototype = {
 	}
 	,__class__: scout_State
 };
-var scout__$Template_RenderResult_$Impl_$ = {};
-scout__$Template_RenderResult_$Impl_$.__name__ = true;
-scout__$Template_RenderResult_$Impl_$._new = function(str) {
-	var this1 = str;
-	return this1;
-};
-scout__$Template_RenderResult_$Impl_$.ofRenderable = function(renderable) {
-	return renderable.toRenderResult();
-};
 var scout__$Template_SafeContent = function(content) {
 	this.content = content;
 };
@@ -828,6 +873,7 @@ var scout_View = function() {
 	this.events = [];
 };
 scout_View.__name__ = true;
+scout_View.__interfaces__ = [scout_Renderable];
 scout_View.prototype = {
 	set_el: function(el) {
 		if(this.delegatedEvents.length > 0) {
@@ -846,24 +892,7 @@ scout_View.prototype = {
 		return window.document.contains(this.el);
 	}
 	,template: function() {
-		return scout__$Template_RenderResult_$Impl_$._new("" + this.children.toRenderResult());
-	}
-	,addView: function(view,options) {
-		this.children.add(view,options);
-		return this;
-	}
-	,addViews: function(views,options) {
-		var _g = 0;
-		while(_g < views.length) {
-			var view = views[_g];
-			++_g;
-			this.addView(view,options);
-		}
-		return this;
-	}
-	,removeView: function(view) {
-		this.children.remove(view);
-		return this;
+		return scout__$RenderResult_RenderResult_$Impl_$._new("");
 	}
 	,shouldRender: function() {
 		return true;
@@ -875,6 +904,12 @@ scout_View.prototype = {
 			scout__$Signal_Signal_$Impl_$.dispatch(this.afterRender,this);
 		}
 		return this;
+	}
+	,doToRenderResult: function() {
+		return this.render().get_content();
+	}
+	,toRenderResult: function() {
+		return this.doToRenderResult();
 	}
 	,remove: function() {
 		scout__$Signal_Signal_$Impl_$.dispatch(this.onRemove,this);
@@ -902,202 +937,185 @@ scout_View.prototype = {
 	}
 	,__class__: scout_View
 };
-var scout_ViewCollection = function(view,initViews) {
-	var this1 = { slots : []};
-	this.onReady = this1;
-	this.views = [];
-	this.attached = false;
-	this.rendered = false;
-	this.sel = ".children";
-	this.parent = null;
-	var _gthis = this;
-	this.view = view;
-	if(initViews != null) {
-		var _g = 0;
-		while(_g < initViews.length) {
-			var view1 = initViews[_g];
-			++_g;
-			this.add(view1);
-		}
-	}
-	scout__$Signal_Signal_$Impl_$.add(this.view.onRemove,function(_) {
-		_gthis.removeAll();
-	});
-	scout__$Signal_Signal_$Impl_$.add(this.view.beforeRender,function(_1) {
-		_gthis.detach();
-	});
-	scout__$Signal_Signal_$Impl_$.add(this.view.afterRender,function(_2) {
-		_gthis.render();
-	});
+var scout_component_ChildrenView = function(attrs) {
+	this.children = [];
+	scout_View.call(this);
+	this.states = { };
+	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
+	this.states.body = new scout_State(attrs.body != null ? attrs.body : []);
+	this.states.className = new scout_State(attrs.className);
+	this.states.sel = new scout_State(attrs.sel);
+	this.ensureElement();
+	this.initBody();
+	this.delegateEvents(this.events);
 };
-scout_ViewCollection.__name__ = true;
-scout_ViewCollection.__interfaces__ = [scout_Renderable];
-scout_ViewCollection.prototype = {
-	get_length: function() {
-		return this.views.length;
-	}
-	,add: function(view,options) {
-		if(options == null) {
-			options = { silent : false, replace : false};
-		}
-		if(options.replace) {
-			var _g = 0;
-			var _g1 = this.views;
-			while(_g < _g1.length) {
-				var v = _g1[_g];
-				++_g;
-				this.remove(v,{ silent : options.silent});
-			}
-			this.views = [];
-		}
-		if(options.at != null) {
-			this.views.splice(options.at,0,view);
-		} else {
-			this.views.push(view);
-		}
-		view.children.parent = this;
-		if(!options.silent) {
-			this.attach([view],{ ready : this.inDom()});
-		}
-		return this;
-	}
-	,remove: function(view,options) {
-		if(options == null) {
-			options = { silent : false};
-		}
-		HxOverrides.remove(this.views,view);
-		if(!options.silent) {
-			scout__$Signal_Signal_$Impl_$.dispatch(view.onRemove,view);
-			view.undelegateEvents();
-			view.el.remove();
-		}
-		return this;
-	}
-	,find: function(elt) {
-		return Lambda.find(this.views,elt);
-	}
-	,has: function(elt) {
-		return Lambda.exists(this.views,elt);
-	}
-	,exists: function(view) {
-		return Lambda.has(this.views,view);
-	}
-	,iterator: function() {
-		return HxOverrides.iter(this.views);
-	}
-	,mount: function(tag,options) {
-		if(options == null) {
-			options = { };
-		}
-		if(Object.prototype.hasOwnProperty.call(options,"className")) {
-			var cls = Reflect.field(options,"className");
-			this.sel = "." + Std.string(cls);
-		} else {
-			options["className"] = "children";
-		}
-		return new scout_Element(tag,options,[]).toRenderResult();
-	}
-	,toRenderResult: function() {
-		return this.mount("div");
-	}
-	,render: function() {
-		this.attach(this.views,{ ready : this.inDom(), reset : true});
-		this.rendered = true;
-		return this;
-	}
-	,removeAll: function() {
-		if(this.parent != null) {
-			this.parent.remove(this.view,{ silent : true});
-		}
+scout_component_ChildrenView.__name__ = true;
+scout_component_ChildrenView.__super__ = scout_View;
+scout_component_ChildrenView.prototype = $extend(scout_View.prototype,{
+	initBody: function() {
 		var _g = 0;
-		var _g1 = this.views;
+		var _g1 = this.states.body.get();
 		while(_g < _g1.length) {
-			var view = _g1[_g];
+			var item = _g1[_g];
 			++_g;
-			scout__$Signal_Signal_$Impl_$.dispatch(view.onRemove,view);
-			view.undelegateEvents();
-			view.el.remove();
+			this.add(item);
 		}
-		this.views = [];
 	}
-	,detach: function() {
-		var _g = 0;
-		var _g1 = this.views;
-		while(_g < _g1.length) {
-			var view = _g1[_g];
-			++_g;
-			if(view.el.parentElement != null) {
-				view.el.parentElement.removeChild(view.el);
-			}
-		}
-		return this;
+	,add: function(item) {
+		this.states.body.get().push(item);
+		var child = new scout_Child(this,item);
+		this.children.push(child);
+		this.render();
 	}
-	,attach: function(views,options) {
-		var el = this.getEl();
-		if(el == null) {
-			return;
-		}
-		if(options.reset == null) {
-			options.reset = false;
-		}
-		var managers = views.map(function(v) {
-			return v.children;
+	,'delete': function(item) {
+		var child = Lambda.find(this.children,function(c) {
+			return c.get().cid == item.cid;
 		});
-		var _g = 0;
-		while(_g < managers.length) {
-			var manager = managers[_g];
-			++_g;
-			if(!manager.rendered) {
-				manager.view.render();
-				manager.rendered = true;
-			}
-		}
-		if(options.reset) {
-			el.innerHTML = "";
-		}
-		var _g1 = 0;
-		while(_g1 < views.length) {
-			var view = views[_g1];
-			++_g1;
-			el.appendChild(view.el);
-		}
-		var _g2 = 0;
-		while(_g2 < managers.length) {
-			var manager1 = managers[_g2];
-			++_g2;
-			manager1.attached = true;
-			if(options.ready) {
-				manager1.ready();
-			}
+		if(child != null) {
+			child.remove();
+			var value = this.states.body.get().filter(function(i) {
+				return i != item;
+			});
+			this.states.body.set(value);
+			this.children = this.children.filter(function(c1) {
+				return c1 != child;
+			});
+			this.render();
 		}
 	}
-	,ready: function() {
-		scout__$Signal_Signal_$Impl_$.dispatch(this.view.onReady,this.view);
-		var _g = 0;
-		var _g1 = this.views;
-		while(_g < _g1.length) {
-			var view = _g1[_g];
-			++_g;
-			if(view.children.attached) {
-				view.children.ready();
-			}
+	,template: function() {
+		return scout__$RenderResult_RenderResult_$Impl_$._new("" + this.children.map(function(r) {
+			return r.toRenderResult();
+		}).join(""));
+	}
+	,ensureElement: function() {
+		if(this.states.sel.get() != null) {
+			this.set_el(window.document.querySelector(this.states.sel.get()));
+		}
+		if(this.el == null) {
+			this.set_el(window.document.createElement(this.states.tag.get()));
 		}
 	}
-	,getEl: function() {
-		return this.view.el.querySelector(this.sel);
+	,get_tag: function() {
+		return this.states.tag.get();
 	}
-	,inDom: function() {
-		var node = this.view.el;
-		while(node != null) {
-			if(node == window.document.body) {
-				return true;
-			}
-			node = node.parentElement;
-		}
-		return false;
+	,set_tag: function(value) {
+		this.states.tag.set(value);
+		return value;
 	}
-	,__class__: scout_ViewCollection
+	,get_body: function() {
+		return this.states.body.get();
+	}
+	,set_body: function(value) {
+		this.states.body.set(value);
+		return value;
+	}
+	,get_className: function() {
+		return this.states.className.get();
+	}
+	,set_className: function(value) {
+		this.states.className.set(value);
+		return value;
+	}
+	,get_sel: function() {
+		return this.states.sel.get();
+	}
+	,set_sel: function(value) {
+		this.states.sel.set(value);
+		return value;
+	}
+	,__class__: scout_component_ChildrenView
+});
+var scout_component_ListView = function(attrs) {
+	this.children = [];
+	scout_View.call(this);
+	this.states = { };
+	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "ul");
+	this.states.items = new scout_State(attrs.items != null ? attrs.items : []);
+	this.states.className = new scout_State(attrs.className != null ? attrs.className : "list");
+	this.states.sel = new scout_State(attrs.sel);
+	this.ensureElement();
+	this.initItems();
+	this.delegateEvents(this.events);
 };
+scout_component_ListView.__name__ = true;
+scout_component_ListView.__super__ = scout_View;
+scout_component_ListView.prototype = $extend(scout_View.prototype,{
+	initItems: function() {
+		var _g = 0;
+		var _g1 = this.states.items.get();
+		while(_g < _g1.length) {
+			var item = _g1[_g];
+			++_g;
+			this.add(item);
+		}
+	}
+	,add: function(item) {
+		this.states.items.get().push(item);
+		var child = new scout_Child(this,item);
+		this.children.push(child);
+		this.render();
+	}
+	,'delete': function(item) {
+		var child = Lambda.find(this.children,function(c) {
+			return c.get().cid == item.cid;
+		});
+		if(child != null) {
+			child.remove();
+			var value = this.states.items.get().filter(function(i) {
+				return i != item;
+			});
+			this.states.items.set(value);
+			this.children = this.children.filter(function(c1) {
+				return c1 != child;
+			});
+			this.render();
+		}
+	}
+	,template: function() {
+		return scout__$RenderResult_RenderResult_$Impl_$._new("" + this.children.map(function(r) {
+			return r.toRenderResult();
+		}).join(""));
+	}
+	,ensureElement: function() {
+		if(this.states.sel.get() != null) {
+			this.set_el(window.document.querySelector(this.states.sel.get()));
+		}
+		if(this.el == null) {
+			this.set_el(window.document.createElement(this.states.tag.get()));
+			this.el.setAttribute("class",this.states.className.get());
+		}
+	}
+	,get_tag: function() {
+		return this.states.tag.get();
+	}
+	,set_tag: function(value) {
+		this.states.tag.set(value);
+		return value;
+	}
+	,get_items: function() {
+		return this.states.items.get();
+	}
+	,set_items: function(value) {
+		this.states.items.set(value);
+		return value;
+	}
+	,get_className: function() {
+		return this.states.className.get();
+	}
+	,set_className: function(value) {
+		this.states.className.set(value);
+		return value;
+	}
+	,get_sel: function() {
+		return this.states.sel.get();
+	}
+	,set_sel: function(value) {
+		this.states.sel.set(value);
+		return value;
+	}
+	,__class__: scout_component_ListView
+});
 var todo_model_VisibleTodos = { __ename__ : true, __constructs__ : ["VisibleAll","VisibleCompleted","VisiblePending"] };
 todo_model_VisibleTodos.VisibleAll = ["VisibleAll",0];
 todo_model_VisibleTodos.VisibleAll.__enum__ = todo_model_VisibleTodos;
@@ -1257,22 +1275,24 @@ todo_model_Todo.prototype = {
 	}
 	,__class__: todo_model_Todo
 };
-var todo_view_App = function(attrs,children) {
+var todo_view_App = function(attrs) {
 	scout_View.call(this);
 	this.states = { };
 	this.states.id = new scout_State(attrs.id != null ? attrs.id : "App");
+	this.states.body = new scout_State(attrs.body);
+	var tmp = attrs.children != null ? attrs.children : new scout_component_ChildrenView({ tag : "section", className : "todo-app", body : this.states.body.get()});
+	this.states.children = new scout_Child(this,tmp);
 	this.states.className = new scout_State(attrs.className);
 	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
 	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
-	this.children = new scout_ViewCollection(this,children);
 	this.delegateEvents(this.events);
 };
 todo_view_App.__name__ = true;
 todo_view_App.__super__ = scout_View;
 todo_view_App.prototype = $extend(scout_View.prototype,{
 	template: function() {
-		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <section class=\"todoapp\">\r\n      " + this.children.toRenderResult() + "\r\n    </section>\r\n    \r\n    <footer class=\"info\">\r\n      <p>Double-click to edit a todo.</p>\r\n      <p>Written by <a href=\"https://github.com/wartman\">wartman</a></p>\r\n      <p>Part of <a href=\"http://todomvc.com\">TodoMVC</a></p>\r\n    </footer>\r\n  ");
+		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    " + this.states.children.get().toRenderResult() + "\r\n    \r\n    <footer class=\"info\">\r\n      <p>Double-click to edit a todo.</p>\r\n      <p>Written by <a href=\"https://github.com/wartman\">wartman</a></p>\r\n      <p>Part of <a href=\"http://todomvc.com\">TodoMVC</a></p>\r\n    </footer>\r\n  ");
 	}
 	,ensureElement: function() {
 		if(this.states.sel.get() != null) {
@@ -1288,6 +1308,20 @@ todo_view_App.prototype = $extend(scout_View.prototype,{
 	}
 	,set_id: function(value) {
 		this.states.id.set(value);
+		return value;
+	}
+	,get_body: function() {
+		return this.states.body.get();
+	}
+	,set_body: function(value) {
+		this.states.body.set(value);
+		return value;
+	}
+	,get_children: function() {
+		return this.states.children.get();
+	}
+	,set_children: function(value) {
+		this.states.children.set(value);
 		return value;
 	}
 	,get_className: function() {
@@ -1313,7 +1347,7 @@ todo_view_App.prototype = $extend(scout_View.prototype,{
 	}
 	,__class__: todo_view_App
 });
-var todo_view_Header = function(attrs,children) {
+var todo_view_Header = function(attrs) {
 	scout_View.call(this);
 	this.states = { };
 	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "header");
@@ -1322,7 +1356,6 @@ var todo_view_Header = function(attrs,children) {
 	this.states.store = new scout_State(attrs.store);
 	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
-	this.children = new scout_ViewCollection(this,children);
 	this.events.push({ selector : ".new-todo", action : "keydown", method : $bind(this,this.handleSubmit)});
 	this.delegateEvents(this.events);
 };
@@ -1338,7 +1371,7 @@ todo_view_Header.prototype = $extend(scout_View.prototype,{
 		}
 	}
 	,template: function() {
-		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <h1>" + StringTools.htmlEscape(Std.string(this.states.title.get())) + "</h1>\r\n    <input class=\"new-todo\" placeholder=\"What needs doing?\">\r\n  ");
+		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <h1>" + StringTools.htmlEscape(Std.string(this.states.title.get())) + "</h1>\r\n    <input class=\"new-todo\" placeholder=\"What needs doing?\">\r\n  ");
 	}
 	,ensureElement: function() {
 		if(this.states.sel.get() != null) {
@@ -1386,7 +1419,7 @@ todo_view_Header.prototype = $extend(scout_View.prototype,{
 	}
 	,__class__: todo_view_Header
 });
-var todo_view_TodoItem = function(attrs,children) {
+var todo_view_TodoItem = function(attrs) {
 	scout_View.call(this);
 	this.states = { };
 	this.states.className = new scout_State(attrs.className != null ? attrs.className : "todo-item");
@@ -1396,7 +1429,6 @@ var todo_view_TodoItem = function(attrs,children) {
 	this.states.store = new scout_State(attrs.store);
 	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
-	this.children = new scout_ViewCollection(this,children);
 	this.initializeVisibility();
 	scout__$Signal_Signal_$Impl_$.observe(scout__$Signal_Signal_$Impl_$.ofStateful(this.states.todo.get().states.editing),$bind(this,this.toggleEditMode));
 	scout__$Signal_Signal_$Impl_$.observe(scout__$Signal_Signal_$Impl_$.ofStateful(this.states.store.get().states.visible),$bind(this,this.isVisible));
@@ -1476,7 +1508,7 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 		this.el.setAttribute("style","display:none;");
 	}
 	,template: function() {
-		return scout__$Template_RenderResult_$Impl_$._new("\r\n    <input class=\"edit\" type=\"text\" value=\"" + StringTools.htmlEscape(Std.string(this.states.todo.get().states.label.get())) + "\" />\r\n    <div class=\"view\">\r\n      <input class=\"toggle\" type=\"checkbox\"" + StringTools.htmlEscape(this.states.todo.get().states.completed.get() ? " checked" : "") + " />\r\n      <label>" + StringTools.htmlEscape(Std.string(this.states.todo.get().states.label.get())) + "</label>\r\n      <button class=\"destroy\"></button>\r\n    </div>\r\n  ");
+		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <input class=\"edit\" type=\"text\" value=\"" + StringTools.htmlEscape(Std.string(this.states.todo.get().states.label.get())) + "\" />\r\n    <div class=\"view\">\r\n      <input class=\"toggle\" type=\"checkbox\"" + StringTools.htmlEscape(this.states.todo.get().states.completed.get() ? " checked" : "") + " />\r\n      <label>" + StringTools.htmlEscape(Std.string(this.states.todo.get().states.label.get())) + "</label>\r\n      <button class=\"destroy\"></button>\r\n    </div>\r\n  ");
 	}
 	,ensureElement: function() {
 		if(this.states.sel.get() != null) {
@@ -1532,15 +1564,16 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 	}
 	,__class__: todo_view_TodoItem
 });
-var todo_view_TodoList = function(attrs,children) {
+var todo_view_TodoList = function(attrs) {
 	scout_View.call(this);
 	this.states = { };
 	this.states.className = new scout_State(attrs.className != null ? attrs.className : "todo-list-wrapper");
 	this.states.store = new scout_State(attrs.store);
+	var tmp = attrs.body != null ? attrs.body : new scout_component_ListView({ className : "todo-list"});
+	this.states.body = new scout_Child(this,tmp);
 	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
 	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
-	this.children = new scout_ViewCollection(this,children);
 	this.initializeViews();
 	scout__$Signal_Signal_$Impl_$.observe(this.states.store.get().states.todos.get().onAdd,$bind(this,this.addTodo));
 	scout__$Signal_Signal_$Impl_$.observe(this.states.store.get().states.todos.get().onRemove,$bind(this,this.removeTodo));
@@ -1561,13 +1594,15 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 		}
 	}
 	,addTodo: function(todo1) {
-		this.addView(new todo_view_TodoItem({ sel : "#Todo-" + todo1.states.id.get(), id : "Todo-" + todo1.states.id.get(), todo : todo1, store : this.states.store.get()}));
+		this.states.body.get().add(new todo_view_TodoItem({ sel : "#Todo-" + todo1.states.id.get(), id : "Todo-" + todo1.states.id.get(), todo : todo1, store : this.states.store.get()}));
 	}
 	,removeTodo: function(todo1) {
-		var view = this.children.find(function(view1) {
-			return (js_Boot.__cast(view1 , todo_view_TodoItem)).states.todo.get() == todo1;
+		var view = Lambda.find(this.states.body.get().states.items.get(),function(view1) {
+			return view1.states.todo.get() == todo1;
 		});
-		this.removeView(view);
+		if(view != null) {
+			this.states.body.get()["delete"](view);
+		}
 	}
 	,updateCount: function(remaining) {
 		var count = this.el.querySelector(".todo-count");
@@ -1586,7 +1621,7 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 		this.states.store.get().set_visible(todo_model_VisibleTodos.VisiblePending);
 	}
 	,template: function() {
-		return scout__$Template_RenderResult_$Impl_$._new("\r\n    " + this.children.mount("ul",{ className : "todo-list"}) + "\r\n\r\n    <footer class=\"footer\">\r\n      <span class=\"todo-count\">" + StringTools.htmlEscape(Std.string(this.states.store.get().states.todosRemaining.get())) + " Remaining</span>\r\n\r\n      <ul class=\"filters\">\r\n        <li><a href=\"#all\" class=\"filter-all\">All</a></li>\r\n        <li><a href=\"#completed\" class=\"filter-completed\">Completed</a></li>\r\n        <li><a href=\"#pending\" class=\"filter-pending\">Pending</a></li>\r\n      </ul>\r\n    </footer>\r\n  ");
+		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    " + this.states.body.get().toRenderResult() + "\r\n\r\n    <footer class=\"footer\">\r\n      <span class=\"todo-count\">" + StringTools.htmlEscape(Std.string(this.states.store.get().states.todosRemaining.get())) + " Remaining</span>\r\n\r\n      <ul class=\"filters\">\r\n        <li><a href=\"#all\" class=\"filter-all\">All</a></li>\r\n        <li><a href=\"#completed\" class=\"filter-completed\">Completed</a></li>\r\n        <li><a href=\"#pending\" class=\"filter-pending\">Pending</a></li>\r\n      </ul>\r\n    </footer>\r\n  ");
 	}
 	,ensureElement: function() {
 		if(this.states.sel.get() != null) {
@@ -1609,6 +1644,13 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 	}
 	,set_store: function(value) {
 		this.states.store.set(value);
+		return value;
+	}
+	,get_body: function() {
+		return this.states.body.get();
+	}
+	,set_body: function(value) {
+		this.states.body.set(value);
 		return value;
 	}
 	,get_tag: function() {
@@ -1644,11 +1686,11 @@ var Enum = { };
 var __map_reserved = {};
 haxe_ds_ObjectMap.count = 0;
 js_Boot.__toStr = ({ }).toString;
+scout_Child.ids = 0;
 scout_Dom.docNodeType = 9;
 scout_Element.tagNames = ["a","abbr","address","area","article","aside","audio","b","base","bdi","bdo","blockquote","body","br","button","canvas","caption","cite","code","col","colgroup","dd","del","dfn","dir","div","dl","dt","em","embed","fieldset","figcaption","figure","footer","form","h1","h2","h3","h4","h5","h6","head","header","hgroup","hr","html","i","iframe","img","input","ins","kbd","keygen","label","legend","li","link","main","map","mark","menu","meta","nav","noscript","object","ol","optgroup","option","p","param","pre","q","rp","rt","ruby","s","samp","script","section","select","small","source","span","strong","style","sub","sup","table","tbody","td","textarea","tfoot","th","thead","title","tr","u","ul","video"];
 scout_Element.voidTags = ["area","base","br","col","command","embed","hr","img","input","keygen","link","meta","param","source","track","wbr"];
 scout_View.autoIdIndex = 0;
-scout_ViewCollection.ids = 0;
 todo_model_Store.__scout_ids = 0;
 todo_model_Todo.__scout_ids = 0;
 TodoApp.main();

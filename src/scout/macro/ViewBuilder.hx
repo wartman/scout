@@ -16,17 +16,17 @@ class ViewBuilder {
     return new ViewBuilder(Context.getBuildFields(), false).export();
   }
 
-  private var fields:Array<Field>;
-  private var attrs:Array<Field> = [];
-  private var states:Array<Field> = [];
-  private var renderableAttrs:Map<String, String> = new Map();
-  private var attrInitializers:Array<Expr> = [];
-  private var initializers:Array<Expr> = [];
-  private var eventBindings:Array<Expr> = [];
-  private var isJs:Bool;
-  private var hasClassName:Bool = false;
-  private var hasTagName:Bool = false;
-  private var hasSelName:Bool = false;
+  var fields:Array<Field>;
+  var attrs:Array<Field> = [];
+  var states:Array<Field> = [];
+  var renderableAttrs:Map<String, String> = new Map();
+  var attrInitializers:Array<Expr> = [];
+  var initializers:Array<Expr> = [];
+  var eventBindings:Array<Expr> = [];
+  var isJs:Bool;
+  var hasClassName:Bool = false;
+  var hasTagName:Bool = false;
+  var hasSelName:Bool = false;
 
   public function new(fields:Array<Field>, isJs:Bool) {
     this.fields = fields;
@@ -41,7 +41,7 @@ class ViewBuilder {
     return fields;
   }
 
-  private function filterFieldsAndExtractAttrs():Array<Field> {
+  function filterFieldsAndExtractAttrs():Array<Field> {
     return fields.filter(function (f) {
       switch (f.kind) {
         case FVar(t, e):
@@ -76,7 +76,7 @@ class ViewBuilder {
               default:
             }
 
-            addAttr(f.name, t, e, f.pos, isOptional);
+            addAttr(f.name, t, e, f.pos, isOptional, options);
             return false;
           }
           return true;
@@ -138,17 +138,14 @@ class ViewBuilder {
 
   private function generateAttrType() {
     if (!hasClassName) {
-      addAttr('className', macro:String, null, Context.currentPos(), true);
+      addAttr('className', macro:String, null, Context.currentPos(), true, [ AttrRender('class') ]);
     }
-
     if (!hasTagName) {
-      addAttr('tag', macro:String, macro 'div', Context.currentPos(), true);
+      addAttr('tag', macro:String, macro 'div', Context.currentPos(), true, []);
     }
-
     if (!hasSelName) {
-      addAttr('sel', macro:String, null, Context.currentPos(), true);
+      addAttr('sel', macro:String, null, Context.currentPos(), true, []);
     }
-
     return TAnonymous(attrs);
   }
 
@@ -168,11 +165,10 @@ class ViewBuilder {
     if (isJs) {
       return fields.concat((macro class {
 
-        public function new(attrs:$attrType, ?children:Array<scout.View>) {
+        public function new(attrs:$attrType) {
           this.states = cast {};
           $b{attrInitializers};
           ensureElement();
-          this.children = new scout.ViewCollection(this, children);
           $b{initializers};
           $b{eventBindings};
           this.delegateEvents(events);
@@ -196,14 +192,13 @@ class ViewBuilder {
 
     return fields.concat((macro class {
 
-      public function new(attrs:$attrType, ?children:Array<scout.View>) {
+      public function new(attrs:$attrType) {
         this.states = cast {};
         $b{attrInitializers};
-        this.children = new scout.ViewCollection(this, children);
         $b{initializers};
       }
 
-      override private function generateHtml() {
+      override function generateHtml() {
         var options:Dynamic = {}
         $b{ [ for (attr in renderableAttrs.keys()) {
           var name = { expr:EConst(CString(renderableAttrs.get(attr))), pos: Context.currentPos() };
@@ -217,7 +212,7 @@ class ViewBuilder {
     }).fields);
   }
 
-  private function generateGettersAndSetters(fields:Array<Field>) {
+  function generateGettersAndSetters(fields:Array<Field>) {
     for (attr in attrs) switch attr.kind {
       case FVar(t, _):
         fields.push(makeProp(attr.name, t, attr.pos));
@@ -266,7 +261,7 @@ class ViewBuilder {
     };
   }
 
-  private function addAttr(name:String, t:ComplexType, ?e:Expr, pos:Position, isOptional:Bool = false) {
+  private function addAttr(name:String, t:ComplexType, ?e:Expr, pos:Position, isOptional:Bool = false, options:Array<AttrOptions>) {
     attrs.push({
       name: name,
       kind: FVar(t, null),
@@ -284,6 +279,12 @@ class ViewBuilder {
     });
 
     var init = e != null ? macro attrs.$name != null ? attrs.$name : ${e} : macro attrs.$name;
+    for (option in options) switch (option) {
+      case AttrChild:
+        attrInitializers.push(macro this.states.$name = new scout.Child(this, ${init}));
+        return;
+      default:
+    }
     attrInitializers.push(macro this.states.$name = new scout.State(${init}));
   }
 
@@ -295,6 +296,7 @@ class ViewBuilder {
             case 'tag': AttrRender(null);
             case 'observe': AttrObserve(null);
             case 'optional': AttrOptional;
+            case 'child': AttrChild;
             default: Context.error('${s} is not a valid parameter for ${meta.name}', e.pos);
           }
         case EBinop(
@@ -322,6 +324,7 @@ class ViewBuilder {
 
 private enum AttrOptions {
   AttrOptional;
+  AttrChild;
   AttrRender(?alias:String);
   AttrObserve(?target:String);
 }

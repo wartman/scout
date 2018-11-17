@@ -3,15 +3,15 @@ package fixture.view;
 import scout.View;
 import scout.ModelCollection;
 import scout.Template.html;
+import scout.component.ListView;
 import fixture.model.SimpleModel;
-
-using Reflect;
 
 class WithCollectionView extends View {
 
   private static var id:Int = 10;
   
   @:attr var collection:ModelCollection<SimpleModel>;
+  @:attr(child) var body:ListView<SimpleModelView> = new ListView({ items: [] });
 
   @:init
   public function initializeChildren() {
@@ -22,7 +22,7 @@ class WithCollectionView extends View {
 
   @:observe(collection.onAdd)
   public function addViewForModel(model:SimpleModel) {
-    addView(new SimpleModelView({
+    body.add(new SimpleModelView({
       model: model,
       collection: this.collection
     }));
@@ -30,9 +30,9 @@ class WithCollectionView extends View {
 
   @:observe(collection.onRemove)
   public function removeViewForModel(model:SimpleModel) {
-    for (view in children) {
-      if (cast(view, SimpleModelView).model == model) {
-        removeView(view);
+    for (view in body.items) {
+      if (view.model == model) {
+        body.delete(view);
       }
     }
   }
@@ -49,7 +49,7 @@ class WithCollectionView extends View {
   public function template() 
     return html('
       <button class="add">Add model</button>
-      ${ children.mount("ul") }
+      <ul>${body}</ul>
     ');
 
 }

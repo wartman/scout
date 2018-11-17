@@ -1,7 +1,5 @@
 package scout;
 
-import scout.Template;
-
 #if js
   import js.html.Element;
 
@@ -17,7 +15,7 @@ import scout.Template;
 #else
   @:autoBuild(scout.macro.ViewBuilder.buildSys())
 #end
-class View {
+class View implements Renderable {
 
   private static var autoIdIndex:Int = 0;
 
@@ -55,28 +53,13 @@ class View {
   public var afterRender(default, null):Signal<View> = new Signal();
   public var onReady(default, null):Signal<View> = new Signal();
   public var onRemove(default, null):Signal<View> = new Signal();
-  public var children(default, null):ViewCollection;
 
-  public function template() return Template.html('${children}');
-  
-  public function addView(view:View, ?options:ViewCollection.ViewAddingOptions) {
-    children.add(view, options);
-    return this;
-  }
-
-  public function addViews(views:Array<View>, ?options:ViewCollection.ViewAddingOptions) {
-    for (view in views) addView(view, options);
-    return this;
-  }
-
-  public function removeView(view:View) {
-    children.remove(view);
-    return this;
-  }
+  public function template() return Template.html('');
 
   public function shouldRender():Bool {
     return true;
   }
+
 
   public function render() {
     if (shouldRender()) {
@@ -89,6 +72,14 @@ class View {
       afterRender.dispatch(this);
     }
     return this;
+  }
+
+  public dynamic function doToRenderResult():RenderResult {
+    return render().content; // ???
+  }
+
+  public function toRenderResult():RenderResult {
+    return doToRenderResult();
   }
 
   #if js

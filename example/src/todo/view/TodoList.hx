@@ -1,13 +1,17 @@
 package todo.view;
 
 import Scout;
+import scout.component.ListView;
 import todo.model.Store;
 import todo.model.Todo;
+
+using Lambda;
 
 class TodoList extends View {
 
   @:attr var className:String = 'todo-list-wrapper';
   @:attr var store:Store;
+  @:attr(child) var body:ListView<TodoItem> = new ListView({ className: 'todo-list' });
 
   @:init
   private function initializeViews() {
@@ -18,7 +22,7 @@ class TodoList extends View {
 
   @:observe(store.todos.onAdd)
   public function addTodo(todo:Todo) {
-    addView(new TodoItem({ 
+    body.add(new TodoItem({ 
       sel: '#Todo-${todo.id}',
       id: 'Todo-${todo.id}',
       todo: todo, 
@@ -28,8 +32,8 @@ class TodoList extends View {
 
   @:observe(store.todos.onRemove)
   public function removeTodo(todo:Todo) {
-    var view = children.find(function (view) return cast(view, TodoItem).todo == todo);
-    removeView(view);
+    var view = body.items.find(function (view) return view.todo == todo);
+    if (view != null) body.delete(view);
   }
 
   @:js
@@ -56,7 +60,7 @@ class TodoList extends View {
   }
 
   public function template() return Scout.html('
-    ${children.mount("ul", { className: "todo-list" })}
+    ${body}
 
     <footer class="footer">
       <span class="todo-count">${store.todosRemaining} Remaining</span>

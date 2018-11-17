@@ -13,16 +13,17 @@ class TodoApp {
     }));
 
     var app = new App({
-      sel: '#App'
-    }, [
-      new Header({ 
-        title: 'Todo',
-        store: store 
-      }),
-      new TodoList({
-        store: store
-      })
-    ]);
+      sel: '#App',
+      body: [
+        new Header({ 
+          title: 'Todo',
+          store: store 
+        }),
+        new TodoList({
+          store: store
+        })
+      ]
+    });
 
     #if js
       Scout.mount('#Root', app);

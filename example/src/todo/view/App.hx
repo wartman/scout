@@ -13,7 +13,7 @@ class App extends View {
     body: body
   });
 
-  public function template() return Scout.html('
+  public function render() return Scout.html('
     ${children}
     
     <footer class="info">

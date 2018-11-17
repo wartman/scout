@@ -23,7 +23,7 @@ class InteractiveTestView extends View {
     }
   }
 
-  public function template() return html('
+  public function render() return html('
     <header>
       <h1>Interactive Test</h1>
       <form class="change-name">

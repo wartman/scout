@@ -87,7 +87,7 @@ class TodoItem extends View {
     el.setAttribute('style', 'display:none;');
   }
 
-  public function template() return Scout.html('
+  public function render() return Scout.html('
     <input class="edit" type="text" value="${todo.label}" />
     <div class="view">
       <input class="toggle" type="checkbox"${ todo.completed ? " checked" : "" } />

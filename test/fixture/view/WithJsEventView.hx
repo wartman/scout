@@ -11,6 +11,6 @@ class WithJsEventView extends View {
     trace('yay');    
   }
 
-  public function template() return html('ok');
+  public function render() return html('ok');
 
 }

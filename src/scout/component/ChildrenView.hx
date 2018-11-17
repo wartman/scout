@@ -18,7 +18,7 @@ class ChildrenView<T:View> extends View {
   }
 
   public function add(item:T) {
-    body.push(item);
+    if (!body.has(item)) body.push(item);
     var child = new Child(this, item);
     children.push(child);
     render();
@@ -36,6 +36,6 @@ class ChildrenView<T:View> extends View {
     }
   }
 
-  public function template() return html('${children}');
+  public function render() return html('${children}');
 
 }

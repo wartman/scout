@@ -19,6 +19,6 @@ class SimpleModelView extends View {
     collection.remove(model);
   }
 
-  public function template() return html('${model.value} <button class="remove">x</button>'); 
+  public function render() return html('${model.value} <button class="remove">x</button>'); 
 
 }

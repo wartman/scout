@@ -9,7 +9,7 @@ class AttrsView extends View {
   @:attr var tag:String = 'section';
   @:attr var location:String = 'world';
 
-  public function template() return html('Hello ${location}!');
+  public function render() return html('Hello ${location}!');
 
   @:on('click')
   public function onClick(e) {

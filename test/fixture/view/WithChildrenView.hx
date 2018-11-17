@@ -13,7 +13,7 @@ class WithChildrenView extends View {
     ]
   });
 
-  public function template()
+  public function render()
     return html('<ul>${body}</ul>');
 
 }

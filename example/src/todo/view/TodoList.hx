@@ -59,7 +59,7 @@ class TodoList extends View {
     store.visible = VisiblePending;
   }
 
-  public function template() return Scout.html('
+  public function render() return Scout.html('
     ${body}
 
     <footer class="footer">

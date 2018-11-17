@@ -54,18 +54,17 @@ class View implements Renderable {
   public var onReady(default, null):Signal<View> = new Signal();
   public var onRemove(default, null):Signal<View> = new Signal();
 
-  public function template() return Template.html('');
+  public function __scout_render() return Template.html('');
 
   public function shouldRender():Bool {
     return true;
   }
 
-
   public function render() {
     if (shouldRender()) {
       beforeRender.dispatch(this);
       #if js
-        el.innerHTML = template();
+        el.innerHTML = __scout_render();
       #else
         content = generateHtml();
       #end
@@ -107,7 +106,7 @@ class View implements Renderable {
   #else
 
     private function generateHtml() {
-      return template();
+      return __scout_render();
     }
 
   #end

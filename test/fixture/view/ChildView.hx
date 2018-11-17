@@ -9,6 +9,6 @@ class ChildView extends View {
   @:attr var tag:String = "li";
   @:attr var message:String;
 
-  public function template() return html('${message}'); 
+  public function render() return html('${message}'); 
 
 }

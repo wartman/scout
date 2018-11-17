@@ -891,7 +891,7 @@ scout_View.prototype = {
 	,get_isReady: function() {
 		return window.document.contains(this.el);
 	}
-	,template: function() {
+	,__scout_render: function() {
 		return scout__$RenderResult_RenderResult_$Impl_$._new("");
 	}
 	,shouldRender: function() {
@@ -900,7 +900,7 @@ scout_View.prototype = {
 	,render: function() {
 		if(this.shouldRender()) {
 			scout__$Signal_Signal_$Impl_$.dispatch(this.beforeRender,this);
-			this.el.innerHTML = this.template();
+			this.el.innerHTML = this.__scout_render();
 			scout__$Signal_Signal_$Impl_$.dispatch(this.afterRender,this);
 		}
 		return this;
@@ -962,7 +962,9 @@ scout_component_ChildrenView.prototype = $extend(scout_View.prototype,{
 		}
 	}
 	,add: function(item) {
-		this.states.body.get().push(item);
+		if(!Lambda.has(this.states.body.get(),item)) {
+			this.states.body.get().push(item);
+		}
 		var child = new scout_Child(this,item);
 		this.children.push(child);
 		this.render();
@@ -983,7 +985,7 @@ scout_component_ChildrenView.prototype = $extend(scout_View.prototype,{
 			this.render();
 		}
 	}
-	,template: function() {
+	,__scout_render: function() {
 		return scout__$RenderResult_RenderResult_$Impl_$._new("" + this.children.map(function(r) {
 			return r.toRenderResult();
 		}).join(""));
@@ -1051,7 +1053,9 @@ scout_component_ListView.prototype = $extend(scout_View.prototype,{
 		}
 	}
 	,add: function(item) {
-		this.states.items.get().push(item);
+		if(!Lambda.has(this.states.items.get(),item)) {
+			this.states.items.get().push(item);
+		}
 		var child = new scout_Child(this,item);
 		this.children.push(child);
 		this.render();
@@ -1072,7 +1076,7 @@ scout_component_ListView.prototype = $extend(scout_View.prototype,{
 			this.render();
 		}
 	}
-	,template: function() {
+	,__scout_render: function() {
 		return scout__$RenderResult_RenderResult_$Impl_$._new("" + this.children.map(function(r) {
 			return r.toRenderResult();
 		}).join(""));
@@ -1291,7 +1295,7 @@ var todo_view_App = function(attrs) {
 todo_view_App.__name__ = true;
 todo_view_App.__super__ = scout_View;
 todo_view_App.prototype = $extend(scout_View.prototype,{
-	template: function() {
+	__scout_render: function() {
 		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    " + this.states.children.get().toRenderResult() + "\r\n    \r\n    <footer class=\"info\">\r\n      <p>Double-click to edit a todo.</p>\r\n      <p>Written by <a href=\"https://github.com/wartman\">wartman</a></p>\r\n      <p>Part of <a href=\"http://todomvc.com\">TodoMVC</a></p>\r\n    </footer>\r\n  ");
 	}
 	,ensureElement: function() {
@@ -1370,7 +1374,7 @@ todo_view_Header.prototype = $extend(scout_View.prototype,{
 			target.value = "";
 		}
 	}
-	,template: function() {
+	,__scout_render: function() {
 		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <h1>" + StringTools.htmlEscape(Std.string(this.states.title.get())) + "</h1>\r\n    <input class=\"new-todo\" placeholder=\"What needs doing?\">\r\n  ");
 	}
 	,ensureElement: function() {
@@ -1507,7 +1511,7 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 	,hide: function() {
 		this.el.setAttribute("style","display:none;");
 	}
-	,template: function() {
+	,__scout_render: function() {
 		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <input class=\"edit\" type=\"text\" value=\"" + StringTools.htmlEscape(Std.string(this.states.todo.get().states.label.get())) + "\" />\r\n    <div class=\"view\">\r\n      <input class=\"toggle\" type=\"checkbox\"" + StringTools.htmlEscape(this.states.todo.get().states.completed.get() ? " checked" : "") + " />\r\n      <label>" + StringTools.htmlEscape(Std.string(this.states.todo.get().states.label.get())) + "</label>\r\n      <button class=\"destroy\"></button>\r\n    </div>\r\n  ");
 	}
 	,ensureElement: function() {
@@ -1620,7 +1624,7 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 	,filterPending: function(e) {
 		this.states.store.get().set_visible(todo_model_VisibleTodos.VisiblePending);
 	}
-	,template: function() {
+	,__scout_render: function() {
 		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    " + this.states.body.get().toRenderResult() + "\r\n\r\n    <footer class=\"footer\">\r\n      <span class=\"todo-count\">" + StringTools.htmlEscape(Std.string(this.states.store.get().states.todosRemaining.get())) + " Remaining</span>\r\n\r\n      <ul class=\"filters\">\r\n        <li><a href=\"#all\" class=\"filter-all\">All</a></li>\r\n        <li><a href=\"#completed\" class=\"filter-completed\">Completed</a></li>\r\n        <li><a href=\"#pending\" class=\"filter-pending\">Pending</a></li>\r\n      </ul>\r\n    </footer>\r\n  ");
 	}
 	,ensureElement: function() {

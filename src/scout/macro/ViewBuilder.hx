@@ -95,7 +95,8 @@ class ViewBuilder {
             }
           }
 
-          if (name == 'template') {
+          if (name == 'render') {
+            f.name = '__scout_render';
             f.access.push(haxe.macro.Access.AOverride);
           }
 
@@ -205,7 +206,7 @@ class ViewBuilder {
           macro Reflect.setField(options, ${name}, $i{attr});
         } ] }
         return new scout.Element(tag, options, [
-          scout.Template.safe(template())
+          scout.Template.safe(__scout_render())
         ]).toRenderResult();
       }
 

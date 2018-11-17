@@ -9,6 +9,6 @@ class SimpleView extends View {
   @:attr var tag:String = 'section';
   @:attr var key:String;
 
-  public function template() return html(key);
+  public function render() return html(key);
 
 }

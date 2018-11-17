@@ -46,7 +46,7 @@ class WithCollectionView extends View {
     }));
   }
 
-  public function template() 
+  public function render() 
     return html('
       <button class="add">Add model</button>
       <ul>${body}</ul>

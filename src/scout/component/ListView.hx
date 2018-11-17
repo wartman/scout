@@ -20,7 +20,7 @@ class ListView<T:View> extends View {
   }
 
   public function add(item:T) {
-    items.push(item);
+    if (!items.has(item)) items.push(item);
     var child = new Child(this, item);
     children.push(child);
     render();
@@ -38,6 +38,6 @@ class ListView<T:View> extends View {
     }
   }
 
-  public function template() return html('${children}');
+  public function render() return html('${children}');
 
 }

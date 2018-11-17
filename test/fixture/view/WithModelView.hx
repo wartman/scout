@@ -8,7 +8,7 @@ class WithModelView extends View {
 
   @:attr var model:SimpleModel;
 
-  public function template() return html('${model.name}|${model.value}');
+  public function render() return html('${model.name}|${model.value}');
 
   @:observe(model.states.name)
   @:observe(model.states.value)

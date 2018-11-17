@@ -8,7 +8,7 @@ class WithConstructorChildrenView extends View {
 
   @:attr(child) var body:ChildrenView<View> = new ChildrenView({});
 
-  public function template() 
+  public function render() 
     return html('<ul>${body}</ul>');
 
 }

@@ -11,7 +11,7 @@ class WithCollectionView extends View {
   private static var id:Int = 10;
   
   @:attr var collection:ModelCollection<SimpleModel>;
-  @:attr(child) var body:ListView<SimpleModelView> = new ListView({ items: [] });
+  @:attr(child) var body:ListView<SimpleModelView> = new ListView({ className: 'children', items: [] });
 
   @:init
   public function initializeChildren() {

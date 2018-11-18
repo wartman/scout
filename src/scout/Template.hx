@@ -55,9 +55,10 @@ class Template {
           if (t.toString() == 'scout.RenderResult') return expr;
         case TInst(t, params):
           if (t.toString() == 'Array') {
-            if (params[0].follow().toString() == 'scout.RenderResult') 
+            var param = params[0].follow();
+            if (param.toString() == 'scout.RenderResult') 
               return macro @:pos(expr.pos) new scout.RenderResult(${expr}.join(''));
-            else if (Context.unify(params[0].follow(), renderable))
+            else if (Context.unify(param, renderable) && !(param.toString() == 'Dynamic'))
               return macro @:pos(expr.pos) ${expr}.map(function (r) return r.toRenderResult()).join('');
             else
               return macro @:pos(expr.pos) ${expr}.map(function (s) { 
@@ -68,17 +69,9 @@ class Template {
                 }
               }).join('');
           }
-
-          // if (t.toString() != 'String') {
-          //   var interfaces = Context.getType(t.toString()).getClass().interfaces;
-          //   for (i in interfaces) {
-          //     if (i.t.toString() == 'scout.Renderable') {
-          //       return macro @:pos(expr.pos) ${expr}.toRenderResult();
-          //     }
-          //   }
-          // }
         default:
       }
+      
       switch (expr.expr) {
         case EBinop(OpAdd, e1, e2):
           return { expr: EBinop(OpAdd, handle(e1), handle(e2)), pos: expr.pos };

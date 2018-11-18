@@ -104,7 +104,7 @@ TodoApp.__name__ = true;
 TodoApp.main = function() {
 	var store = new todo_model_Store({ todos : new scout_ModelCollection()});
 	store.states.todos.get().add(new todo_model_Todo({ label : "Hey world!"}));
-	var app = new todo_view_App({ sel : "#App", body : [new todo_view_Header({ title : "Todo", store : store}),new todo_view_TodoList({ store : store})]});
+	var app = new todo_view_App({ sel : "#App", title : "Todo", store : store});
 	Scout.mount("#Root",app);
 };
 var haxe_IMap = function() { };
@@ -402,80 +402,6 @@ js_Boot.__isNativeObj = function(o) {
 js_Boot.__resolveNativeClass = function(name) {
 	return $global[name];
 };
-var scout_Observable = function() { };
-scout_Observable.__name__ = true;
-scout_Observable.prototype = {
-	__class__: scout_Observable
-};
-var scout_Stateful = function() { };
-scout_Stateful.__name__ = true;
-scout_Stateful.__interfaces__ = [scout_Observable];
-scout_Stateful.prototype = {
-	__class__: scout_Stateful
-};
-var scout_Renderable = function() { };
-scout_Renderable.__name__ = true;
-scout_Renderable.prototype = {
-	__class__: scout_Renderable
-};
-var scout_Child = function(parent,view) {
-	this.cid = "__scout_proxy_" + scout_Child.ids++;
-	var this1 = { slots : []};
-	this.signal = this1;
-	var _gthis = this;
-	this.parent = parent;
-	this.view = view;
-	scout__$Signal_Signal_$Impl_$.add(this.parent.onRemove,function(_) {
-		_gthis.remove();
-	});
-	scout__$Signal_Signal_$Impl_$.add(this.parent.beforeRender,function(_1) {
-		_gthis.detach();
-	});
-	scout__$Signal_Signal_$Impl_$.add(this.parent.afterRender,function(_2) {
-		_gthis.attach();
-	});
-};
-scout_Child.__name__ = true;
-scout_Child.__interfaces__ = [scout_Stateful,scout_Renderable];
-scout_Child.prototype = {
-	subscribe: function(cb) {
-		return scout__$Signal_Signal_$Impl_$.add(this.signal,cb);
-	}
-	,set: function(value) {
-		if(this.view == value) {
-			return;
-		}
-		this.remove();
-		this.view = value;
-		this.attach();
-		scout__$Signal_Signal_$Impl_$.dispatch(this.signal,this.view);
-	}
-	,get: function() {
-		this.view.doToRenderResult = $bind(this,this.toRenderResult);
-		return this.view;
-	}
-	,remove: function() {
-		var _this = this.view;
-		scout__$Signal_Signal_$Impl_$.dispatch(_this.onRemove,_this);
-		_this.undelegateEvents();
-		_this.el.remove();
-	}
-	,attach: function() {
-		var target = this.parent.el.querySelector("#" + this.cid);
-		if(target != null) {
-			target.parentNode.replaceChild(this.view.render().el,target);
-		}
-	}
-	,detach: function() {
-		if(this.view.el.parentElement != null) {
-			this.view.el.parentElement.removeChild(this.view.el);
-		}
-	}
-	,toRenderResult: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("<div id=\"" + StringTools.htmlEscape(Std.string(this.cid)) + "\"></div>");
-	}
-	,__class__: scout_Child
-};
 var scout_Dom = function() { };
 scout_Dom.__name__ = true;
 scout_Dom.delegate = function(el,selector,type,cb,useCapture) {
@@ -514,6 +440,11 @@ scout_Dom.closest = function(el,selector) {
 scout_Dom.html = function(el,html) {
 	el.innerHTML = html;
 	return el;
+};
+var scout_Renderable = function() { };
+scout_Renderable.__name__ = true;
+scout_Renderable.prototype = {
+	__class__: scout_Renderable
 };
 var scout_Element = function(tag,attrs,children) {
 	this.children = [];
@@ -570,8 +501,12 @@ scout_Element.prototype = {
 		if(this.children.length == 0 && scout_Element.voidTags.indexOf(this.tag) >= 0) {
 			return scout__$RenderResult_RenderResult_$Impl_$._new("<" + this.tag + this.renderAttrs() + "/>");
 		}
-		return scout__$RenderResult_RenderResult_$Impl_$._new("<" + this.tag + this.renderAttrs() + ">" + this.children.map(function(r) {
-			return r.toRenderResult();
+		return scout__$RenderResult_RenderResult_$Impl_$._new("<" + this.tag + this.renderAttrs() + ">" + this.children.map(function(s) {
+			if(js_Boot.__instanceof(s,scout_Renderable)) {
+				return (js_Boot.__cast(s , scout_Renderable)).toRenderResult();
+			} else {
+				return StringTools.htmlEscape(Std.string(s));
+			}
 		}).join("") + "</" + this.tag + ">");
 	}
 	,renderAttrs: function() {
@@ -599,6 +534,11 @@ scout_Element.prototype = {
 		return this.render();
 	}
 	,__class__: scout_Element
+};
+var scout_Observable = function() { };
+scout_Observable.__name__ = true;
+scout_Observable.prototype = {
+	__class__: scout_Observable
 };
 var scout_Model = function() { };
 scout_Model.__name__ = true;
@@ -707,6 +647,12 @@ scout_ModelCollection.prototype = {
 		return this;
 	}
 	,__class__: scout_ModelCollection
+};
+var scout_Stateful = function() { };
+scout_Stateful.__name__ = true;
+scout_Stateful.__interfaces__ = [scout_Observable];
+scout_Stateful.prototype = {
+	__class__: scout_Stateful
 };
 var scout_ObservableState = function(value) {
 	var this1 = { slots : []};
@@ -860,6 +806,7 @@ scout_Template.safe = function(str) {
 	return new scout__$Template_SafeContent(str);
 };
 var scout_View = function() {
+	this.parentListeners = [];
 	var this1 = { slots : []};
 	this.onRemove = this1;
 	var this11 = { slots : []};
@@ -868,7 +815,7 @@ var scout_View = function() {
 	this.afterRender = this12;
 	var this13 = { slots : []};
 	this.beforeRender = this13;
-	this.cid = "view" + scout_View.autoIdIndex++;
+	this.cid = "__scout_view_" + scout_View.autoIdIndex++;
 	this.delegatedEvents = [];
 	this.events = [];
 };
@@ -905,11 +852,48 @@ scout_View.prototype = {
 		}
 		return this;
 	}
-	,doToRenderResult: function() {
-		return this.render().get_content();
+	,setParent: function(view) {
+		var _gthis = this;
+		this.parent = view;
+		var _g = 0;
+		var _g1 = this.parentListeners;
+		while(_g < _g1.length) {
+			var listener = _g1[_g];
+			++_g;
+			var this2 = listener.signal;
+			this2.slots = this2.slots.filter((function(listener1) {
+				return function(slot) {
+					return slot.listener != listener1[0];
+				};
+			})([listener.listener]));
+		}
+		this.parentListeners = [scout__$Signal_Signal_$Impl_$.add(this.parent.onRemove,function(_) {
+			_gthis.remove();
+		}),scout__$Signal_Signal_$Impl_$.add(this.parent.beforeRender,function(_1) {
+			_gthis.detach();
+		}),scout__$Signal_Signal_$Impl_$.add(this.parent.afterRender,function(_2) {
+			_gthis.attach();
+		})];
 	}
 	,toRenderResult: function() {
-		return this.doToRenderResult();
+		if(this.parent != null) {
+			return scout__$RenderResult_RenderResult_$Impl_$._new("<div id=\"" + StringTools.htmlEscape(Std.string(this.cid)) + "\"></div>");
+		}
+		return this.render().get_content();
+	}
+	,attach: function() {
+		if(this.parent == null) {
+			return;
+		}
+		var target = this.parent.el.querySelector("#" + this.cid);
+		if(target != null) {
+			target.parentNode.replaceChild(this.render().el,target);
+		}
+	}
+	,detach: function() {
+		if(this.el.parentElement != null) {
+			this.el.parentElement.removeChild(this.el);
+		}
 	}
 	,remove: function() {
 		scout__$Signal_Signal_$Impl_$.dispatch(this.onRemove,this);
@@ -937,104 +921,12 @@ scout_View.prototype = {
 	}
 	,__class__: scout_View
 };
-var scout_component_ChildrenView = function(attrs) {
-	this.children = [];
-	scout_View.call(this);
-	this.states = { };
-	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
-	this.states.body = new scout_State(attrs.body != null ? attrs.body : []);
-	this.states.className = new scout_State(attrs.className);
-	this.states.sel = new scout_State(attrs.sel);
-	this.ensureElement();
-	this.initBody();
-	this.delegateEvents(this.events);
-};
-scout_component_ChildrenView.__name__ = true;
-scout_component_ChildrenView.__super__ = scout_View;
-scout_component_ChildrenView.prototype = $extend(scout_View.prototype,{
-	initBody: function() {
-		var _g = 0;
-		var _g1 = this.states.body.get();
-		while(_g < _g1.length) {
-			var item = _g1[_g];
-			++_g;
-			this.add(item);
-		}
-	}
-	,add: function(item) {
-		if(!Lambda.has(this.states.body.get(),item)) {
-			this.states.body.get().push(item);
-		}
-		var child = new scout_Child(this,item);
-		this.children.push(child);
-		this.render();
-	}
-	,'delete': function(item) {
-		var child = Lambda.find(this.children,function(c) {
-			return c.get().cid == item.cid;
-		});
-		if(child != null) {
-			child.remove();
-			var value = this.states.body.get().filter(function(i) {
-				return i != item;
-			});
-			this.states.body.set(value);
-			this.children = this.children.filter(function(c1) {
-				return c1 != child;
-			});
-			this.render();
-		}
-	}
-	,__scout_render: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("" + this.children.map(function(r) {
-			return r.toRenderResult();
-		}).join(""));
-	}
-	,ensureElement: function() {
-		if(this.states.sel.get() != null) {
-			this.set_el(window.document.querySelector(this.states.sel.get()));
-		}
-		if(this.el == null) {
-			this.set_el(window.document.createElement(this.states.tag.get()));
-		}
-	}
-	,get_tag: function() {
-		return this.states.tag.get();
-	}
-	,set_tag: function(value) {
-		this.states.tag.set(value);
-		return value;
-	}
-	,get_body: function() {
-		return this.states.body.get();
-	}
-	,set_body: function(value) {
-		this.states.body.set(value);
-		return value;
-	}
-	,get_className: function() {
-		return this.states.className.get();
-	}
-	,set_className: function(value) {
-		this.states.className.set(value);
-		return value;
-	}
-	,get_sel: function() {
-		return this.states.sel.get();
-	}
-	,set_sel: function(value) {
-		this.states.sel.set(value);
-		return value;
-	}
-	,__class__: scout_component_ChildrenView
-});
 var scout_component_ListView = function(attrs) {
-	this.children = [];
 	scout_View.call(this);
 	this.states = { };
 	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "ul");
-	this.states.items = new scout_State(attrs.items != null ? attrs.items : []);
 	this.states.className = new scout_State(attrs.className != null ? attrs.className : "list");
+	this.states.items = new scout_State(attrs.items != null ? attrs.items : []);
 	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
 	this.initItems();
@@ -1053,31 +945,24 @@ scout_component_ListView.prototype = $extend(scout_View.prototype,{
 		}
 	}
 	,add: function(item) {
+		item.setParent(this);
 		if(!Lambda.has(this.states.items.get(),item)) {
 			this.states.items.get().push(item);
 		}
-		var child = new scout_Child(this,item);
-		this.children.push(child);
 		this.render();
 	}
 	,'delete': function(item) {
-		var child = Lambda.find(this.children,function(c) {
-			return c.get().cid == item.cid;
-		});
-		if(child != null) {
-			child.remove();
+		if(Lambda.has(this.states.items.get(),item)) {
+			item.remove();
 			var value = this.states.items.get().filter(function(i) {
 				return i != item;
 			});
 			this.states.items.set(value);
-			this.children = this.children.filter(function(c1) {
-				return c1 != child;
-			});
 			this.render();
 		}
 	}
 	,__scout_render: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("" + this.children.map(function(r) {
+		return scout__$RenderResult_RenderResult_$Impl_$._new("" + this.states.items.get().map(function(r) {
 			return r.toRenderResult();
 		}).join(""));
 	}
@@ -1097,18 +982,18 @@ scout_component_ListView.prototype = $extend(scout_View.prototype,{
 		this.states.tag.set(value);
 		return value;
 	}
-	,get_items: function() {
-		return this.states.items.get();
-	}
-	,set_items: function(value) {
-		this.states.items.set(value);
-		return value;
-	}
 	,get_className: function() {
 		return this.states.className.get();
 	}
 	,set_className: function(value) {
 		this.states.className.set(value);
+		return value;
+	}
+	,get_items: function() {
+		return this.states.items.get();
+	}
+	,set_items: function(value) {
+		this.states.items.set(value);
 		return value;
 	}
 	,get_sel: function() {
@@ -1282,10 +1167,15 @@ todo_model_Todo.prototype = {
 var todo_view_App = function(attrs) {
 	scout_View.call(this);
 	this.states = { };
+	this.states.title = new scout_State(attrs.title);
+	this.states.store = new scout_State(attrs.store);
 	this.states.id = new scout_State(attrs.id != null ? attrs.id : "App");
-	this.states.body = new scout_State(attrs.body);
-	var tmp = attrs.children != null ? attrs.children : new scout_component_ChildrenView({ tag : "section", className : "todo-app", body : this.states.body.get()});
-	this.states.children = new scout_Child(this,tmp);
+	var __v = attrs.header != null ? attrs.header : new todo_view_Header({ title : this.states.title.get(), store : this.states.store.get()});
+	__v.setParent(this);
+	this.states.header = new scout_State(__v);
+	var __v1 = attrs.list != null ? attrs.list : new todo_view_TodoList({ store : this.states.store.get()});
+	__v1.setParent(this);
+	this.states.list = new scout_State(__v1);
 	this.states.className = new scout_State(attrs.className);
 	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
 	this.states.sel = new scout_State(attrs.sel);
@@ -1296,7 +1186,7 @@ todo_view_App.__name__ = true;
 todo_view_App.__super__ = scout_View;
 todo_view_App.prototype = $extend(scout_View.prototype,{
 	__scout_render: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    " + this.states.children.get().toRenderResult() + "\r\n    \r\n    <footer class=\"info\">\r\n      <p>Double-click to edit a todo.</p>\r\n      <p>Written by <a href=\"https://github.com/wartman\">wartman</a></p>\r\n      <p>Part of <a href=\"http://todomvc.com\">TodoMVC</a></p>\r\n    </footer>\r\n  ");
+		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    " + this.states.header.get().toRenderResult() + "\r\n    " + this.states.list.get().toRenderResult() + "\r\n    <footer class=\"info\">\r\n      <p>Double-click to edit a todo.</p>\r\n      <p>Written by <a href=\"https://github.com/wartman\">wartman</a></p>\r\n      <p>Part of <a href=\"http://todomvc.com\">TodoMVC</a></p>\r\n    </footer>\r\n  ");
 	}
 	,ensureElement: function() {
 		if(this.states.sel.get() != null) {
@@ -1307,6 +1197,20 @@ todo_view_App.prototype = $extend(scout_View.prototype,{
 			this.el.setAttribute("id",this.states.id.get());
 		}
 	}
+	,get_title: function() {
+		return this.states.title.get();
+	}
+	,set_title: function(value) {
+		this.states.title.set(value);
+		return value;
+	}
+	,get_store: function() {
+		return this.states.store.get();
+	}
+	,set_store: function(value) {
+		this.states.store.set(value);
+		return value;
+	}
 	,get_id: function() {
 		return this.states.id.get();
 	}
@@ -1314,18 +1218,18 @@ todo_view_App.prototype = $extend(scout_View.prototype,{
 		this.states.id.set(value);
 		return value;
 	}
-	,get_body: function() {
-		return this.states.body.get();
+	,get_header: function() {
+		return this.states.header.get();
 	}
-	,set_body: function(value) {
-		this.states.body.set(value);
+	,set_header: function(value) {
+		this.states.header.set(value);
 		return value;
 	}
-	,get_children: function() {
-		return this.states.children.get();
+	,get_list: function() {
+		return this.states.list.get();
 	}
-	,set_children: function(value) {
-		this.states.children.set(value);
+	,set_list: function(value) {
+		this.states.list.set(value);
 		return value;
 	}
 	,get_className: function() {
@@ -1573,8 +1477,9 @@ var todo_view_TodoList = function(attrs) {
 	this.states = { };
 	this.states.className = new scout_State(attrs.className != null ? attrs.className : "todo-list-wrapper");
 	this.states.store = new scout_State(attrs.store);
-	var tmp = attrs.body != null ? attrs.body : new scout_component_ListView({ className : "todo-list"});
-	this.states.body = new scout_Child(this,tmp);
+	var __v = attrs.body != null ? attrs.body : new scout_component_ListView({ className : "todo-list"});
+	__v.setParent(this);
+	this.states.body = new scout_State(__v);
 	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
 	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
@@ -1690,7 +1595,6 @@ var Enum = { };
 var __map_reserved = {};
 haxe_ds_ObjectMap.count = 0;
 js_Boot.__toStr = ({ }).toString;
-scout_Child.ids = 0;
 scout_Dom.docNodeType = 9;
 scout_Element.tagNames = ["a","abbr","address","area","article","aside","audio","b","base","bdi","bdo","blockquote","body","br","button","canvas","caption","cite","code","col","colgroup","dd","del","dfn","dir","div","dl","dt","em","embed","fieldset","figcaption","figure","footer","form","h1","h2","h3","h4","h5","h6","head","header","hgroup","hr","html","i","iframe","img","input","ins","kbd","keygen","label","legend","li","link","main","map","mark","menu","meta","nav","noscript","object","ol","optgroup","option","p","param","pre","q","rp","rt","ruby","s","samp","script","section","select","small","source","span","strong","style","sub","sup","table","tbody","td","textarea","tfoot","th","thead","title","tr","u","ul","video"];
 scout_Element.voidTags = ["area","base","br","col","command","embed","hr","img","input","keygen","link","meta","param","source","track","wbr"];

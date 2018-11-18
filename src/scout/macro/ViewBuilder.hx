@@ -282,7 +282,12 @@ class ViewBuilder {
     var init = e != null ? macro attrs.$name != null ? attrs.$name : ${e} : macro attrs.$name;
     for (option in options) switch (option) {
       case AttrChild:
-        attrInitializers.push(macro this.states.$name = new scout.Child(this, ${init}));
+        attrInitializers.push(macro {
+          var __v = ${init};
+          __v.setParent(this);
+          this.states.$name = new scout.State(__v);
+        });
+        // attrInitializers.push(macro this.states.$name = new scout.Child(this, ${init}));
         return;
       default:
     }

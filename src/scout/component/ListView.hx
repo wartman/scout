@@ -1,8 +1,6 @@
 package scout.component;
 
 import scout.View;
-import scout.Child;
-import scout.Renderable;
 import scout.Template.html;
 
 using Lambda;
@@ -10,34 +8,30 @@ using Lambda;
 class ListView<T:View> extends View {
 
   @:attr var tag:String = 'ul';
-  @:attr var items:Array<T> = [];
   @:attr var className:String = 'list';
-  var children:Array<Child<T>> = [];
+  @:attr var items:Array<T> = [];
 
   @:init 
   function initItems() {
     for (item in items) add(item);
   }
-
+  
   public function add(item:T) {
+    item.setParent(this);
     if (!items.has(item)) items.push(item);
-    var child = new Child(this, item);
-    children.push(child);
     render();
   }
 
   public function delete(item:T) {
-    var child = children.find(function (c) return c.get().cid == item.cid);
-    if (child != null) {
+    if (items.has(item)) {
       #if js
-        child.remove();
+        item.remove();
       #end
       items = items.filter(function (i) return i != item);
-      children = children.filter(function (c) return c != child);
       render();
     }
   }
 
-  public function render() return html('${children}');
+  public function render() return html('${items}');
 
 }

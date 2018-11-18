@@ -16,9 +16,17 @@ class ViewTest extends TestCase {
       assertTrue(true);
       var view = new WithConstructorChildrenView({
         body: new scout.component.ChildrenView({
+          className: 'foo',
+          tag: 'ul',
           body: [
             cast new ChildView({ message: 'Hey' }),
-            cast new ChildView({ message: 'World' })
+            cast new ChildView({ message: 'World' }),
+            cast new scout.component.ListView({
+              items: [
+                cast new ChildView({ message: 'Hey' }),
+                cast new ChildView({ message: 'World' })
+              ]
+            }) 
           ]
         })
       });
@@ -66,27 +74,6 @@ class ViewTest extends TestCase {
     assertEquals(
       '<div>changed|changed</div>',
       view.content
-    );
-  }
-
-  public function testAddChildrenViaConstructor() {
-    var view = new WithConstructorChildrenView({
-      body: new scout.component.ChildrenView({
-        body: [
-          cast new ChildView({ message: 'Hey' }),
-          cast new ChildView({ message: 'World' })
-        ]
-      })
-    });
-    view.render();
-    assertEquals(
-      '<div>
-        <ul class="children">
-          <li class="child">Hey</li>
-          <li class="child">World</li>
-        </ul>
-      </div>'.clean(),
-      view.content.clean()
     );
   }
 

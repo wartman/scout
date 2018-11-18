@@ -7,6 +7,7 @@ import scout.Template.html;
 class WithChildrenView extends View {
 
   @:attr(child) var body:ListView<ChildView> = new ListView({
+    className: 'children',
     items: [
       new ChildView({ message: 'Hey' }),
       new ChildView({ message: 'World' })
@@ -14,6 +15,6 @@ class WithChildrenView extends View {
   });
 
   public function render()
-    return html('<ul>${body}</ul>');
+    return html('${body}');
 
 }

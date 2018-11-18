@@ -1,21 +1,24 @@
 package todo.view;
 
 import Scout;
-import scout.component.ChildrenView;
+import todo.model.Store;
 
 class App extends View {
 
+  @:attr var title:String;
+  @:attr var store:Store;
   @:attr(tag) var id:String = 'App';
-  @:attr var body:Array<View>;
-  @:attr(child) var children:ChildrenView<View> = new ChildrenView({ 
-    tag: 'section', 
-    className: 'todo-app', 
-    body: body
+  @:attr(child) var header:Header = new Header({
+    title: title,
+    store: store
+  });
+  @:attr(child) var list:TodoList = new TodoList({
+    store: store
   });
 
   public function render() return Scout.html('
-    ${children}
-    
+    ${header}
+    ${list}
     <footer class="info">
       <p>Double-click to edit a todo.</p>
       <p>Written by <a href="https://github.com/wartman">wartman</a></p>

@@ -48,11 +48,15 @@ class View implements Renderable {
     #end
   }
 
-  public var cid(default, null):String = 'view' + autoIdIndex++;
+  public var cid(default, null):String = '__scout_view_' + autoIdIndex++;
   public var beforeRender(default, null):Signal<View> = new Signal();
   public var afterRender(default, null):Signal<View> = new Signal();
   public var onReady(default, null):Signal<View> = new Signal();
   public var onRemove(default, null):Signal<View> = new Signal();
+  var parent:View;
+  #if js
+    var parentListeners:Array<Signal.SignalSlot<View>> = [];
+  #end
 
   public function __scout_render() return Template.html('');
 
@@ -73,17 +77,42 @@ class View implements Renderable {
     return this;
   }
 
-  public dynamic function doToRenderResult():RenderResult {
-    return render().content; // ???
-  }
-
-  public function toRenderResult():RenderResult {
-    return doToRenderResult();
+  public function setParent(view:View) {
+    parent = view;
+    #if js
+      for (listener in parentListeners) listener.remove();
+      parentListeners = [
+        parent.onRemove.add(function (_) remove()),
+        parent.beforeRender.add(function (_) detach()),
+        parent.afterRender.add(function (_) attach())
+      ];
+    #end
   }
 
   #if js
 
-    public inline function remove() {
+    public function toRenderResult():RenderResult {
+      if (parent != null) {
+        return Template.html('<div id="$cid"></div>');
+      }
+      return render().content;
+    }
+
+    public function attach() {
+      if (parent == null) return;
+      var target = parent.el.querySelector('#${cid}');
+      if (target != null) {
+        target.parentNode.replaceChild(render().el, target);
+      }
+    }
+
+    public function detach() {
+      if (el.parentElement != null) {
+        el.parentElement.removeChild(el);
+      }
+    }
+
+    public function remove() {
       onRemove.dispatch(this);
       undelegateEvents();
       el.remove();
@@ -104,6 +133,10 @@ class View implements Renderable {
     }
 
   #else
+
+    public function toRenderResult():RenderResult {
+      return generateHtml();
+    }
 
     private function generateHtml() {
       return __scout_render();

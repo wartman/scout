@@ -860,8 +860,8 @@ scout_View.prototype = {
 		while(_g < _g1.length) {
 			var listener = _g1[_g];
 			++_g;
-			var this2 = listener.signal;
-			this2.slots = this2.slots.filter((function(listener1) {
+			var this1 = listener.signal;
+			this1.slots = this1.slots.filter((function(listener1) {
 				return function(slot) {
 					return slot.listener != listener1[0];
 				};
@@ -1170,16 +1170,16 @@ var todo_view_App = function(attrs) {
 	this.states.title = new scout_State(attrs.title);
 	this.states.store = new scout_State(attrs.store);
 	this.states.id = new scout_State(attrs.id != null ? attrs.id : "App");
+	this.states.className = new scout_State(attrs.className);
+	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
+	this.states.sel = new scout_State(attrs.sel);
+	this.ensureElement();
 	var __v = attrs.header != null ? attrs.header : new todo_view_Header({ title : this.states.title.get(), store : this.states.store.get()});
 	__v.setParent(this);
 	this.states.header = new scout_State(__v);
 	var __v1 = attrs.list != null ? attrs.list : new todo_view_TodoList({ store : this.states.store.get()});
 	__v1.setParent(this);
 	this.states.list = new scout_State(__v1);
-	this.states.className = new scout_State(attrs.className);
-	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
-	this.states.sel = new scout_State(attrs.sel);
-	this.ensureElement();
 	this.delegateEvents(this.events);
 };
 todo_view_App.__name__ = true;

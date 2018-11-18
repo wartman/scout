@@ -21,6 +21,7 @@ class ViewBuilder {
   var states:Array<Field> = [];
   var renderableAttrs:Map<String, String> = new Map();
   var attrInitializers:Array<Expr> = [];
+  var childInitializers:Array<Expr> = [];
   var initializers:Array<Expr> = [];
   var eventBindings:Array<Expr> = [];
   var isJs:Bool;
@@ -282,12 +283,12 @@ class ViewBuilder {
     var init = e != null ? macro attrs.$name != null ? attrs.$name : ${e} : macro attrs.$name;
     for (option in options) switch (option) {
       case AttrChild:
-        attrInitializers.push(macro {
+        // Note: pushing ot initializers to ensure that children are called last.
+        initializers.push(macro {
           var __v = ${init};
           __v.setParent(this);
           this.states.$name = new scout.State(__v);
         });
-        // attrInitializers.push(macro this.states.$name = new scout.Child(this, ${init}));
         return;
       default:
     }

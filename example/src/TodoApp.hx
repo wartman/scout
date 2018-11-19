@@ -8,9 +8,6 @@ class TodoApp {
     var store = new Store({
       todos: new TodoCollection()
     });
-    store.todos.add(new Todo({
-      label: 'Hey world!'
-    }));
 
     var app = new App({
       sel: '#App',

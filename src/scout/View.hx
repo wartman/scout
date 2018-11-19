@@ -17,7 +17,7 @@ package scout;
 #end
 class View implements Renderable {
 
-  private static var autoIdIndex:Int = 0;
+  static var autoIdIndex:Int = 0;
 
   #if js
     @:isVar public var el(default, set):Element;
@@ -33,8 +33,8 @@ class View implements Renderable {
     }
     public var content(get, null):String;
     public function get_content() return el.outerHTML;
-    private var events:Array<ViewEvent> = [];
-    private var delegatedEvents:Array<Dom.EventBinding> = [];
+    var events:Array<ViewEvent> = [];
+    var delegatedEvents:Array<Dom.EventBinding> = [];
   #else
     public var content(default, null):String;
   #end
@@ -78,15 +78,24 @@ class View implements Renderable {
   }
 
   public function setParent(view:View) {
+    detachFromParent();
     parent = view;
     #if js
-      for (listener in parentListeners) listener.remove();
       parentListeners = [
         parent.onRemove.add(function (_) remove()),
         parent.beforeRender.add(function (_) detach()),
         parent.afterRender.add(function (_) attach())
       ];
     #end
+  }
+
+  public function detachFromParent() {
+    #if js
+      for (listener in parentListeners) listener.remove();
+      parentListeners = [];
+      detach();
+    #end
+    parent = null;
   }
 
   #if js
@@ -138,7 +147,7 @@ class View implements Renderable {
       return generateHtml();
     }
 
-    private function generateHtml() {
+    function generateHtml() {
       return __scout_render();
     }
 

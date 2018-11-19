@@ -17,13 +17,14 @@ class ModelBuilder {
     ).export();
   }
 
-  private var c:ClassType;
-  private var fields:Array<Field>;
-  private var newFields:Array<Field> = [];
-  private var props:Array<Field> = [];
-  private var states:Array<Field> = [];
-  private var stateInitializers:Array<Expr> = [];
-  private var initializers:Array<Expr> = [];
+  var c:ClassType;
+  var fields:Array<Field>;
+  var newFields:Array<Field> = [];
+  var props:Array<Field> = [];
+  var states:Array<Field> = [];
+  var stateInitializers:Array<Expr> = [];
+  var initializers:Array<Expr> = [];
+  var observableType = Context.getType('scout.Observable');
 
   public function new(c:ClassType, fields:Array<Field>) {
     this.c = c;
@@ -36,7 +37,7 @@ class ModelBuilder {
     return out.concat(newFields);
   }
 
-  private function filterFieldsAndExtractProps():Array<Field> {
+  function filterFieldsAndExtractProps():Array<Field> {
     return fields.filter(function (f) {
       switch (f.kind) {
         case FVar(t, e):
@@ -149,7 +150,7 @@ class ModelBuilder {
     });
   }
 
-  private function addImplFields() {
+  function addImplFields() {
     var propsType = TAnonymous(props);
     var statesType = TAnonymous(states);
     var localType = TPath({ pack: c.pack, name: c.name });
@@ -158,7 +159,7 @@ class ModelBuilder {
 
       public var states(default, null):$statesType;
       public var onChange(default, null):scout.Signal<$localType> = new scout.Signal();
-      private var silent:Bool = false;
+      var silent:Bool = false;
 
       public function new(props:$propsType) {
         this.states = cast {};
@@ -173,7 +174,7 @@ class ModelBuilder {
     }).fields);
   }
 
-  private function makeProp(name:String, t:ComplexType, pos:Position, hasSetter:Bool = true):Field {
+  function makeProp(name:String, t:ComplexType, pos:Position, hasSetter:Bool = true):Field {
     return {
       name: name,
       kind: FProp('get', hasSetter ? 'set' : 'never', t, null),
@@ -182,7 +183,7 @@ class ModelBuilder {
     };
   }
 
-  private function makeRealProp(name:String, type:ComplexType, pos:Position, isOptional:Bool):Field {
+  function makeRealProp(name:String, type:ComplexType, pos:Position, isOptional:Bool):Field {
     return {
       name: name,
       kind: FVar(type, null),
@@ -192,7 +193,7 @@ class ModelBuilder {
     };
   }
 
-  private function makeGetter(name:String, ret:ComplexType, pos:Position):Field {
+  function makeGetter(name:String, ret:ComplexType, pos:Position):Field {
     return {
       name: 'get_${name}',
       kind: FFun({
@@ -206,7 +207,7 @@ class ModelBuilder {
     };
   }
 
-  private function makeSetter(name:String, t:ComplexType, pos:Position):Field {
+  function makeSetter(name:String, t:ComplexType, pos:Position):Field {
     return {
       name: 'set_${name}',
       kind: FFun({
@@ -223,7 +224,7 @@ class ModelBuilder {
     };
   }
 
-  private function makeState(name:String, type:ComplexType, ?e:Expr, pos:Position):Field {
+  function makeState(name:String, type:ComplexType, ?e:Expr, pos:Position):Field {
     var obs = {
       name: name,
       kind: FVar(macro:scout.Stateful<$type>),
@@ -231,7 +232,7 @@ class ModelBuilder {
       pos: pos
     };
     var init = e != null ? macro props.$name != null ? props.$name : ${e} : macro props.$name;
-    if (isObservable(Context.getType(type.toString()))) {
+    if (Context.unify(type.toType(), observableType)) {
       stateInitializers.push(macro this.states.$name = new scout.ObservableState(${init}));
     } else { 
       stateInitializers.push(macro this.states.$name = new scout.State(${init}));
@@ -246,23 +247,23 @@ class ModelBuilder {
     return obs;
   }
 
-  private function isObservable(type:haxe.macro.Type) switch (type) {
-    case TType(t, p):
-      return isObservable(t.get().type);
-    case TInst(t, p):
-      var cls = t.get();
-      var interfaces = cls.interfaces;
-      for (i in interfaces) {
-        if (i.t.toString() == 'scout.Observable') return true;
-      }
-      if (cls.superClass != null) {
-        return isObservable(Context.getType(cls.superClass.t.toString()));
-      }
-      return false;
-    default: return false;
-  }
+  // function isObservable(type:haxe.macro.Type) switch (type) {
+  //   case TType(t, p):
+  //     return isObservable(t.get().type);
+  //   case TInst(t, p):
+  //     var cls = t.get();
+  //     var interfaces = cls.interfaces;
+  //     for (i in interfaces) {
+  //       if (i.t.toString() == 'scout.Observable') return true;
+  //     }
+  //     if (cls.superClass != null) {
+  //       return isObservable(Context.getType(cls.superClass.t.toString()));
+  //     }
+  //     return false;
+  //   default: return false;
+  // }
 
-  private function extractPropOptions(meta:MetadataEntry):Array<PropOptions> {
+  function extractPropOptions(meta:MetadataEntry):Array<PropOptions> {
     return [ for (e in meta.params) {
       switch (e.expr) {
         case EConst(CIdent(s)):
@@ -279,7 +280,7 @@ class ModelBuilder {
 
 }
 
-private enum PropOptions {
+enum PropOptions {
   PropAuto;
   PropOptional;
 }

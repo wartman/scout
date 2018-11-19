@@ -6,7 +6,7 @@ import scout.Template.html;
 
 class WithConstructorChildrenView extends View {
 
-  @:attr(child) var body:ChildrenView<View> = new ChildrenView({});
+  @:attr var body:ChildrenView<View> = new ChildrenView({});
 
   public function render() return html('${body}');
 

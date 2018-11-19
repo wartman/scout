@@ -103,7 +103,6 @@ var TodoApp = function() { };
 TodoApp.__name__ = true;
 TodoApp.main = function() {
 	var store = new todo_model_Store({ todos : new scout_ModelCollection()});
-	store.states.todos.get().add(new todo_model_Todo({ label : "Hey world!"}));
 	var app = new todo_view_App({ sel : "#App", title : "Todo", store : store});
 	Scout.mount("#Root",app);
 };
@@ -402,6 +401,48 @@ js_Boot.__isNativeObj = function(o) {
 js_Boot.__resolveNativeClass = function(name) {
 	return $global[name];
 };
+var scout_Observable = function() { };
+scout_Observable.__name__ = true;
+scout_Observable.prototype = {
+	__class__: scout_Observable
+};
+var scout_Stateful = function() { };
+scout_Stateful.__name__ = true;
+scout_Stateful.__interfaces__ = [scout_Observable];
+scout_Stateful.prototype = {
+	__class__: scout_Stateful
+};
+var scout_Child = function(parent,view) {
+	var this1 = { slots : []};
+	this.signal = this1;
+	this.parent = parent;
+	if(view != null) {
+		view.setParent(this.parent);
+		this.view = view;
+	}
+};
+scout_Child.__name__ = true;
+scout_Child.__interfaces__ = [scout_Stateful];
+scout_Child.prototype = {
+	set: function(view) {
+		if(this.view == view) {
+			return;
+		}
+		if(this.view != null) {
+			this.view.detachFromParent();
+		}
+		this.view = view;
+		this.view.setParent(this.parent);
+		scout__$Signal_Signal_$Impl_$.dispatch(this.signal,this.view);
+	}
+	,get: function() {
+		return this.view;
+	}
+	,subscribe: function(cb) {
+		return scout__$Signal_Signal_$Impl_$.add(this.signal,cb);
+	}
+	,__class__: scout_Child
+};
 var scout_Dom = function() { };
 scout_Dom.__name__ = true;
 scout_Dom.delegate = function(el,selector,type,cb,useCapture) {
@@ -535,11 +576,6 @@ scout_Element.prototype = {
 	}
 	,__class__: scout_Element
 };
-var scout_Observable = function() { };
-scout_Observable.__name__ = true;
-scout_Observable.prototype = {
-	__class__: scout_Observable
-};
 var scout_Model = function() { };
 scout_Model.__name__ = true;
 scout_Model.__interfaces__ = [scout_Observable];
@@ -647,12 +683,6 @@ scout_ModelCollection.prototype = {
 		return this;
 	}
 	,__class__: scout_ModelCollection
-};
-var scout_Stateful = function() { };
-scout_Stateful.__name__ = true;
-scout_Stateful.__interfaces__ = [scout_Observable];
-scout_Stateful.prototype = {
-	__class__: scout_Stateful
 };
 var scout_ObservableState = function(value) {
 	var this1 = { slots : []};
@@ -854,7 +884,17 @@ scout_View.prototype = {
 	}
 	,setParent: function(view) {
 		var _gthis = this;
+		this.detachFromParent();
 		this.parent = view;
+		this.parentListeners = [scout__$Signal_Signal_$Impl_$.add(this.parent.onRemove,function(_) {
+			_gthis.remove();
+		}),scout__$Signal_Signal_$Impl_$.add(this.parent.beforeRender,function(_1) {
+			_gthis.detach();
+		}),scout__$Signal_Signal_$Impl_$.add(this.parent.afterRender,function(_2) {
+			_gthis.attach();
+		})];
+	}
+	,detachFromParent: function() {
 		var _g = 0;
 		var _g1 = this.parentListeners;
 		while(_g < _g1.length) {
@@ -867,13 +907,9 @@ scout_View.prototype = {
 				};
 			})([listener.listener]));
 		}
-		this.parentListeners = [scout__$Signal_Signal_$Impl_$.add(this.parent.onRemove,function(_) {
-			_gthis.remove();
-		}),scout__$Signal_Signal_$Impl_$.add(this.parent.beforeRender,function(_1) {
-			_gthis.detach();
-		}),scout__$Signal_Signal_$Impl_$.add(this.parent.afterRender,function(_2) {
-			_gthis.attach();
-		})];
+		this.parentListeners = [];
+		this.detach();
+		this.parent = null;
 	}
 	,toRenderResult: function() {
 		if(this.parent != null) {
@@ -1174,19 +1210,17 @@ var todo_view_App = function(attrs) {
 	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
 	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
-	var __v = attrs.header != null ? attrs.header : new todo_view_Header({ title : this.states.title.get(), store : this.states.store.get()});
-	__v.setParent(this);
-	this.states.header = new scout_State(__v);
-	var __v1 = attrs.list != null ? attrs.list : new todo_view_TodoList({ store : this.states.store.get()});
-	__v1.setParent(this);
-	this.states.list = new scout_State(__v1);
+	var tmp = attrs.header != null ? attrs.header : new todo_view_Header({ title : this.states.title.get(), store : this.states.store.get()});
+	this.states.header = new scout_Child(this,tmp);
+	var tmp1 = attrs.list != null ? attrs.list : new todo_view_TodoList({ store : this.states.store.get()});
+	this.states.list = new scout_Child(this,tmp1);
 	this.delegateEvents(this.events);
 };
 todo_view_App.__name__ = true;
 todo_view_App.__super__ = scout_View;
 todo_view_App.prototype = $extend(scout_View.prototype,{
 	__scout_render: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    " + this.states.header.get().toRenderResult() + "\r\n    " + this.states.list.get().toRenderResult() + "\r\n    <footer class=\"info\">\r\n      <p>Double-click to edit a todo.</p>\r\n      <p>Written by <a href=\"https://github.com/wartman\">wartman</a></p>\r\n      <p>Part of <a href=\"http://todomvc.com\">TodoMVC</a></p>\r\n    </footer>\r\n  ");
+		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <div class=\"todoapp\">\r\n      " + this.states.header.get().toRenderResult() + "\r\n      " + this.states.list.get().toRenderResult() + "\r\n    </div>\r\n    <footer class=\"info\">\r\n      <p>Double-click to edit a todo.</p>\r\n      <p>Written by <a href=\"https://github.com/wartman\">wartman</a></p>\r\n      <p>Part of <a href=\"http://todomvc.com\">TodoMVC</a></p>\r\n    </footer>\r\n  ");
 	}
 	,ensureElement: function() {
 		if(this.states.sel.get() != null) {
@@ -1279,7 +1313,7 @@ todo_view_Header.prototype = $extend(scout_View.prototype,{
 		}
 	}
 	,__scout_render: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <h1>" + StringTools.htmlEscape(Std.string(this.states.title.get())) + "</h1>\r\n    <input class=\"new-todo\" placeholder=\"What needs doing?\">\r\n  ");
+		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <h1>" + StringTools.htmlEscape(Std.string(this.states.title.get())) + "</h1>\r\n    <input class=\"new-todo\" placeholder=\"What needs doing?\" />\r\n  ");
 	}
 	,ensureElement: function() {
 		if(this.states.sel.get() != null) {
@@ -1374,6 +1408,11 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 	,toggleCompleted: function(e) {
 		e.stopPropagation();
 		this.states.todo.get().set_completed(!this.states.todo.get().states.completed.get());
+		if(this.states.todo.get().states.completed.get()) {
+			this.el.classList.add("completed");
+		} else {
+			this.el.classList.remove("completed");
+		}
 	}
 	,removeTodo: function(e) {
 		e.preventDefault();
@@ -1473,16 +1512,16 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 	,__class__: todo_view_TodoItem
 });
 var todo_view_TodoList = function(attrs) {
+	this.shouldInitializeFooter = true;
 	scout_View.call(this);
 	this.states = { };
 	this.states.className = new scout_State(attrs.className != null ? attrs.className : "todo-list-wrapper");
 	this.states.store = new scout_State(attrs.store);
-	var __v = attrs.body != null ? attrs.body : new scout_component_ListView({ className : "todo-list"});
-	__v.setParent(this);
-	this.states.body = new scout_State(__v);
 	this.states.tag = new scout_State(attrs.tag != null ? attrs.tag : "div");
 	this.states.sel = new scout_State(attrs.sel);
 	this.ensureElement();
+	var tmp = attrs.body != null ? attrs.body : new scout_component_ListView({ className : "todo-list"});
+	this.states.body = new scout_Child(this,tmp);
 	this.initializeViews();
 	scout__$Signal_Signal_$Impl_$.observe(this.states.store.get().states.todos.get().onAdd,$bind(this,this.addTodo));
 	scout__$Signal_Signal_$Impl_$.observe(this.states.store.get().states.todos.get().onRemove,$bind(this,this.removeTodo));
@@ -1504,6 +1543,10 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 	}
 	,addTodo: function(todo1) {
 		this.states.body.get().add(new todo_view_TodoItem({ sel : "#Todo-" + todo1.states.id.get(), id : "Todo-" + todo1.states.id.get(), todo : todo1, store : this.states.store.get()}));
+		if(this.shouldInitializeFooter) {
+			this.shouldInitializeFooter = false;
+			this.render();
+		}
 	}
 	,removeTodo: function(todo1) {
 		var view = Lambda.find(this.states.body.get().states.items.get(),function(view1) {
@@ -1512,13 +1555,23 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 		if(view != null) {
 			this.states.body.get()["delete"](view);
 		}
+		if(this.states.store.get().states.todos.get().get_length() == 0) {
+			this.shouldInitializeFooter = true;
+			this.render();
+		}
 	}
 	,updateCount: function(remaining) {
 		var count = this.el.querySelector(".todo-count");
 		if(count == null) {
 			return;
 		}
-		count.innerHTML = remaining + " Remaining";
+		if(remaining == 0) {
+			count.innerHTML = "None left";
+		} else if(remaining == 1) {
+			count.innerHTML = "1 item left";
+		} else {
+			count.innerHTML = remaining + " items left";
+		}
 	}
 	,filterAll: function(e) {
 		this.states.store.get().set_visible(todo_model_VisibleTodos.VisibleAll);
@@ -1530,7 +1583,14 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 		this.states.store.get().set_visible(todo_model_VisibleTodos.VisiblePending);
 	}
 	,__scout_render: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    " + this.states.body.get().toRenderResult() + "\r\n\r\n    <footer class=\"footer\">\r\n      <span class=\"todo-count\">" + StringTools.htmlEscape(Std.string(this.states.store.get().states.todosRemaining.get())) + " Remaining</span>\r\n\r\n      <ul class=\"filters\">\r\n        <li><a href=\"#all\" class=\"filter-all\">All</a></li>\r\n        <li><a href=\"#completed\" class=\"filter-completed\">Completed</a></li>\r\n        <li><a href=\"#pending\" class=\"filter-pending\">Pending</a></li>\r\n      </ul>\r\n    </footer>\r\n  ");
+		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    " + this.states.body.get().toRenderResult() + "\r\n    " + this.footer() + "\r\n  ");
+	}
+	,footer: function() {
+		if(this.states.store.get().states.todos.get().get_length() > 0) {
+			return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <footer class=\"footer\">\r\n      <span class=\"todo-count\">" + StringTools.htmlEscape(Std.string(this.states.store.get().states.todosRemaining.get())) + " Remaining</span>\r\n\r\n      <ul class=\"filters\">\r\n        <li><a href=\"#all\" class=\"filter-all\">All</a></li>\r\n        <li><a href=\"#completed\" class=\"filter-completed\">Completed</a></li>\r\n        <li><a href=\"#pending\" class=\"filter-pending\">Pending</a></li>\r\n      </ul>\r\n    </footer>  \r\n  ");
+		} else {
+			return scout__$RenderResult_RenderResult_$Impl_$._new("");
+		}
 	}
 	,ensureElement: function() {
 		if(this.states.sel.get() != null) {

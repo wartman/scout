@@ -6,7 +6,7 @@ import scout.Template.html;
 
 class WithChildrenView extends View {
 
-  @:attr(child) var body:ListView<ChildView> = new ListView({
+  @:attr var body:ListView<ChildView> = new ListView({
     className: 'children',
     items: [
       new ChildView({ message: 'Hey' }),

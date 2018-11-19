@@ -8,17 +8,19 @@ class App extends View {
   @:attr var title:String;
   @:attr var store:Store;
   @:attr(tag) var id:String = 'App';
-  @:attr(child) var header:Header = new Header({
+  @:attr var header:Header = new Header({
     title: title,
     store: store
   });
-  @:attr(child) var list:TodoList = new TodoList({
+  @:attr var list:TodoList = new TodoList({
     store: store
   });
 
   public function render() return Scout.html('
-    ${header}
-    ${list}
+    <div class="todoapp">
+      ${header}
+      ${list}
+    </div>
     <footer class="info">
       <p>Double-click to edit a todo.</p>
       <p>Written by <a href="https://github.com/wartman">wartman</a></p>

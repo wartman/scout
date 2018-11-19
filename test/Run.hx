@@ -9,7 +9,6 @@ class Run {
     runner.add(new TemplateTest());
     runner.add(new ModelTest());
     runner.add(new ModelCollectionTest());
-    // runner.add(new ViewCollectionTest());
 
     #if php
       Sys.print('<code>');

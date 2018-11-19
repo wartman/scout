@@ -47,6 +47,11 @@ class TodoItem extends View {
   public function toggleCompleted(e) {
     e.stopPropagation();
     todo.completed = !todo.completed;
+    if (todo.completed) {
+      el.classList.add('completed');
+    } else {
+      el.classList.remove('completed');
+    }
   }
 
   @:on('click', '.destroy')

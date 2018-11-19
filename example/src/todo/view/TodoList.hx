@@ -11,7 +11,8 @@ class TodoList extends View {
 
   @:attr var className:String = 'todo-list-wrapper';
   @:attr var store:Store;
-  @:attr(child) var body:ListView<TodoItem> = new ListView({ className: 'todo-list' });
+  @:attr var body:ListView<TodoItem> = new ListView({ className: 'todo-list' });
+  var shouldInitializeFooter:Bool = true;
 
   @:init
   private function initializeViews() {
@@ -28,12 +29,28 @@ class TodoList extends View {
       todo: todo, 
       store: store 
     }));
+
+    // Note: this is NOT the best way to handle this, but
+    //       it demonstrates that Scout will preserve child 
+    //       views when re-rendering a parent. 
+    if (shouldInitializeFooter) {
+      shouldInitializeFooter = false;
+      render();
+    }
   }
 
   @:observe(store.todos.onRemove)
   public function removeTodo(todo:Todo) {
     var view = body.items.find(function (view) return view.todo == todo);
     if (view != null) body.delete(view);
+    
+    // Note: this is NOT the best way to handle this, but
+    //       it demonstrates that Scout will preserve child 
+    //       views when re-rendering a parent. 
+    if (store.todos.length == 0) {
+      shouldInitializeFooter = true;
+      render();
+    }
   }
 
   @:js
@@ -41,7 +58,12 @@ class TodoList extends View {
   private function updateCount(remaining:Int) {
     var count = el.querySelector('.todo-count');
     if (count == null) return;
-    count.innerHTML = remaining + ' Remaining';
+    if (remaining == 0) 
+      count.innerHTML = 'None left';
+    else if (remaining == 1)
+      count.innerHTML = '1 item left';
+    else
+      count.innerHTML = remaining + ' items left';
   }
 
   @:on('click', '.filter-all')
@@ -61,7 +83,10 @@ class TodoList extends View {
 
   public function render() return Scout.html('
     ${body}
+    ${footer()}
+  ');
 
+  function footer() return if ( store.todos.length > 0 ) Scout.html('
     <footer class="footer">
       <span class="todo-count">${store.todosRemaining} Remaining</span>
 
@@ -70,7 +95,7 @@ class TodoList extends View {
         <li><a href="#completed" class="filter-completed">Completed</a></li>
         <li><a href="#pending" class="filter-pending">Pending</a></li>
       </ul>
-    </footer>
-  ');
+    </footer>  
+  ') else Scout.html('');
 
 }

@@ -5,6 +5,7 @@ import haxe.macro.Context;
 
 using Lambda;
 using scout.macro.MacroTools;
+using haxe.macro.Tools;
 
 class ViewBuilder {
 
@@ -280,19 +281,27 @@ class ViewBuilder {
       pos: pos
     });
 
+    var type = t.toType();
+    var viewType = Context.getType('scout.View');
     var init = e != null ? macro attrs.$name != null ? attrs.$name : ${e} : macro attrs.$name;
-    for (option in options) switch (option) {
-      case AttrChild:
-        // Note: pushing ot initializers to ensure that children are called last.
-        initializers.push(macro {
-          var __v = ${init};
-          __v.setParent(this);
-          this.states.$name = new scout.State(__v);
-        });
-        return;
-      default:
+    if (Context.unify(type, viewType)) {
+      // Note: child views are ALWAYS added last.
+      initializers.push(macro this.states.$name = new scout.Child(this, ${init}));
+    } else {
+      attrInitializers.push(macro this.states.$name = new scout.State(${init}));
     }
-    attrInitializers.push(macro this.states.$name = new scout.State(${init}));
+    // for (option in options) switch (option) {
+    //   case AttrChild:
+    //     // Note: pushing ot initializers to ensure that children are called last.
+    //     initializers.push(macro {
+    //       var __v = ${init};
+    //       __v.setParent(this);
+    //       this.states.$name = new scout.State(__v);
+    //     });
+    //     return;
+    //   default:
+    // }
+    // attrInitializers.push(macro this.states.$name = new scout.State(${init}));
   }
 
   private function extractAttrOptions(meta:MetadataEntry):Array<AttrOptions> {
@@ -303,7 +312,6 @@ class ViewBuilder {
             case 'tag': AttrRender(null);
             case 'observe': AttrObserve(null);
             case 'optional': AttrOptional;
-            case 'child': AttrChild;
             default: Context.error('${s} is not a valid parameter for ${meta.name}', e.pos);
           }
         case EBinop(
@@ -331,7 +339,6 @@ class ViewBuilder {
 
 private enum AttrOptions {
   AttrOptional;
-  AttrChild;
   AttrRender(?alias:String);
   AttrObserve(?target:String);
 }

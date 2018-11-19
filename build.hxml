@@ -18,9 +18,9 @@
 -main TodoApp
 -js example/assets/app.js
 
-# --next
+--next
 
-# -cp example/src
-# -main TodoApp
-# -D php7
-# -php example/lib
+-cp example/src
+-main TodoApp
+-D php7
+-php example/lib

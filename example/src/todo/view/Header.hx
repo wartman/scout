@@ -25,7 +25,7 @@ class Header extends View {
 
   public function render() return Scout.html('
     <h1>${title}</h1>
-    <input class="new-todo" placeholder="What needs doing?">
+    <input class="new-todo" placeholder="What needs doing?" />
   ');
 
 }

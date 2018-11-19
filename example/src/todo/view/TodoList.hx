@@ -58,12 +58,7 @@ class TodoList extends View {
   private function updateCount(remaining:Int) {
     var count = el.querySelector('.todo-count');
     if (count == null) return;
-    if (remaining == 0) 
-      count.innerHTML = 'None left';
-    else if (remaining == 1)
-      count.innerHTML = '1 item left';
-    else
-      count.innerHTML = remaining + ' items left';
+    count.innerHTML = todoCount(remaining);
   }
 
   @:on('click', '.filter-all')
@@ -88,8 +83,7 @@ class TodoList extends View {
 
   function footer() return if ( store.todos.length > 0 ) Scout.html('
     <footer class="footer">
-      <span class="todo-count">${store.todosRemaining} Remaining</span>
-
+      <span class="todo-count">${ todoCount(store.todosRemaining) }</span>
       <ul class="filters">
         <li><a href="#all" class="filter-all">All</a></li>
         <li><a href="#completed" class="filter-completed">Completed</a></li>
@@ -97,5 +91,11 @@ class TodoList extends View {
       </ul>
     </footer>  
   ') else Scout.html('');
+
+  function todoCount(remaining:Int) return switch (remaining) { 
+    case 0: Scout.html('No items left');
+    case 1: Scout.html('1 item left');
+    default: Scout.html('${remaining} items left');
+  }
 
 }

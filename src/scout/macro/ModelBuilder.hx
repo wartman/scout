@@ -32,9 +32,18 @@ class ModelBuilder {
   }
 
   public function export():Array<Field> {
+    ensureId();
     var out = filterFieldsAndExtractProps();
     addImplFields();
     return out.concat(newFields);
+  }
+
+  function ensureId() {
+    if (!fields.exists(function (f) return f.name == 'id')) {
+      fields = fields.concat((macro class {
+        @:prop(auto) var id:Int;
+      }).fields);
+    }
   }
 
   function filterFieldsAndExtractProps():Array<Field> {
@@ -72,7 +81,7 @@ class ModelBuilder {
             newFields.push(makeGetter(f.name, t, f.pos));
             newFields.push(makeSetter(f.name, t, f.pos));
 
-            var propName = f.name;
+            // var propName = f.name;
             states.push(makeState(f.name, t, e, f.pos));
 
             return false;
@@ -246,22 +255,6 @@ class ModelBuilder {
 
     return obs;
   }
-
-  // function isObservable(type:haxe.macro.Type) switch (type) {
-  //   case TType(t, p):
-  //     return isObservable(t.get().type);
-  //   case TInst(t, p):
-  //     var cls = t.get();
-  //     var interfaces = cls.interfaces;
-  //     for (i in interfaces) {
-  //       if (i.t.toString() == 'scout.Observable') return true;
-  //     }
-  //     if (cls.superClass != null) {
-  //       return isObservable(Context.getType(cls.superClass.t.toString()));
-  //     }
-  //     return false;
-  //   default: return false;
-  // }
 
   function extractPropOptions(meta:MetadataEntry):Array<PropOptions> {
     return [ for (e in meta.params) {

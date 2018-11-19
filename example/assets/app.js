@@ -1054,52 +1054,45 @@ var todo_model_Store = function(props) {
 	this.onChange = this1;
 	var _gthis = this;
 	this.states = { };
-	this.states.id = new scout_State(props.id != null ? props.id : todo_model_Store.__scout_ids++);
 	this.states.todos = new scout_ObservableState(props.todos);
 	this.states.editing = new scout_State(props.editing);
 	this.states.visible = new scout_State(props.visible != null ? props.visible : todo_model_VisibleTodos.VisibleAll);
 	this.states.todosRemaining = new scout_State(props.todosRemaining);
-	this.states.id.subscribe(function(_) {
+	this.states.id = new scout_State(props.id != null ? props.id : todo_model_Store.__scout_ids++);
+	this.states.todos.subscribe(function(_) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.states.todos.subscribe(function(_1) {
+	this.states.editing.subscribe(function(_1) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.states.editing.subscribe(function(_2) {
+	this.states.visible.subscribe(function(_2) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.states.visible.subscribe(function(_3) {
-		if(!_gthis.silent) {
-			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
-		}
-	});
-	this.states.todosRemaining.subscribe(function(_4) {
+	this.states.todosRemaining.subscribe(function(_3) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
 	this.__scout_init_todosRemaining();
-	this.states.todos.subscribe(function(_5) {
+	this.states.todos.subscribe(function(_4) {
 		_gthis.__scout_init_todosRemaining();
+	});
+	this.states.id.subscribe(function(_5) {
+		if(!_gthis.silent) {
+			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
+		}
 	});
 };
 todo_model_Store.__name__ = true;
 todo_model_Store.__interfaces__ = [scout_Model];
 todo_model_Store.prototype = {
-	get_id: function() {
-		return this.states.id.get();
-	}
-	,set_id: function(value) {
-		this.states.id.set(value);
-		return value;
-	}
-	,get_todos: function() {
+	get_todos: function() {
 		return this.states.todos.get();
 	}
 	,set_todos: function(value) {
@@ -1128,6 +1121,13 @@ todo_model_Store.prototype = {
 			return !todo1.states.completed.get();
 		}).length);
 	}
+	,get_id: function() {
+		return this.states.id.get();
+	}
+	,set_id: function(value) {
+		this.states.id.set(value);
+		return value;
+	}
 	,subscribe: function(listener) {
 		return scout__$Signal_Signal_$Impl_$.add(this.onChange,listener);
 	}
@@ -1139,26 +1139,26 @@ var todo_model_Todo = function(props) {
 	this.onChange = this1;
 	var _gthis = this;
 	this.states = { };
-	this.states.id = new scout_State(props.id != null ? props.id : todo_model_Todo.__scout_ids++);
 	this.states.label = new scout_State(props.label);
 	this.states.completed = new scout_State(props.completed != null && props.completed);
 	this.states.editing = new scout_State(props.editing != null && props.editing);
-	this.states.id.subscribe(function(_) {
+	this.states.id = new scout_State(props.id != null ? props.id : todo_model_Todo.__scout_ids++);
+	this.states.label.subscribe(function(_) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.states.label.subscribe(function(_1) {
+	this.states.completed.subscribe(function(_1) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.states.completed.subscribe(function(_2) {
+	this.states.editing.subscribe(function(_2) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
 	});
-	this.states.editing.subscribe(function(_3) {
+	this.states.id.subscribe(function(_3) {
 		if(!_gthis.silent) {
 			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,_gthis);
 		}
@@ -1167,14 +1167,7 @@ var todo_model_Todo = function(props) {
 todo_model_Todo.__name__ = true;
 todo_model_Todo.__interfaces__ = [scout_Model];
 todo_model_Todo.prototype = {
-	get_id: function() {
-		return this.states.id.get();
-	}
-	,set_id: function(value) {
-		this.states.id.set(value);
-		return value;
-	}
-	,get_label: function() {
+	get_label: function() {
 		return this.states.label.get();
 	}
 	,set_label: function(value) {
@@ -1193,6 +1186,13 @@ todo_model_Todo.prototype = {
 	}
 	,set_editing: function(value) {
 		this.states.editing.set(value);
+		return value;
+	}
+	,get_id: function() {
+		return this.states.id.get();
+	}
+	,set_id: function(value) {
+		this.states.id.set(value);
 		return value;
 	}
 	,subscribe: function(listener) {
@@ -1565,13 +1565,7 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 		if(count == null) {
 			return;
 		}
-		if(remaining == 0) {
-			count.innerHTML = "None left";
-		} else if(remaining == 1) {
-			count.innerHTML = "1 item left";
-		} else {
-			count.innerHTML = remaining + " items left";
-		}
+		count.innerHTML = this.todoCount(remaining);
 	}
 	,filterAll: function(e) {
 		this.states.store.get().set_visible(todo_model_VisibleTodos.VisibleAll);
@@ -1587,9 +1581,19 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 	}
 	,footer: function() {
 		if(this.states.store.get().states.todos.get().get_length() > 0) {
-			return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <footer class=\"footer\">\r\n      <span class=\"todo-count\">" + StringTools.htmlEscape(Std.string(this.states.store.get().states.todosRemaining.get())) + " Remaining</span>\r\n\r\n      <ul class=\"filters\">\r\n        <li><a href=\"#all\" class=\"filter-all\">All</a></li>\r\n        <li><a href=\"#completed\" class=\"filter-completed\">Completed</a></li>\r\n        <li><a href=\"#pending\" class=\"filter-pending\">Pending</a></li>\r\n      </ul>\r\n    </footer>  \r\n  ");
+			return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <footer class=\"footer\">\r\n      <span class=\"todo-count\">" + this.todoCount(this.states.store.get().states.todosRemaining.get()) + "</span>\r\n      <ul class=\"filters\">\r\n        <li><a href=\"#all\" class=\"filter-all\">All</a></li>\r\n        <li><a href=\"#completed\" class=\"filter-completed\">Completed</a></li>\r\n        <li><a href=\"#pending\" class=\"filter-pending\">Pending</a></li>\r\n      </ul>\r\n    </footer>  \r\n  ");
 		} else {
 			return scout__$RenderResult_RenderResult_$Impl_$._new("");
+		}
+	}
+	,todoCount: function(remaining) {
+		switch(remaining) {
+		case 0:
+			return scout__$RenderResult_RenderResult_$Impl_$._new("No items left");
+		case 1:
+			return scout__$RenderResult_RenderResult_$Impl_$._new("1 item left");
+		default:
+			return scout__$RenderResult_RenderResult_$Impl_$._new("" + StringTools.htmlEscape(remaining == null ? "null" : "" + remaining) + " items left");
 		}
 	}
 	,ensureElement: function() {

@@ -9,7 +9,6 @@ enum VisibleTodos {
 }
 
 class Store implements Model {
-  @:prop(auto) var id:Int;
   @:prop var todos:TodoCollection;
   @:prop(optional) var editing:Todo;  
   @:prop var visible:VisibleTodos = VisibleAll;

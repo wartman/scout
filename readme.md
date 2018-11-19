@@ -14,7 +14,6 @@ import Scout;
 
 class ExampleModel implements Model {
 
-  @:prop var id:Int;
   @:prop var greeting:String;
   @:prop var location:String;
 
@@ -76,9 +75,29 @@ class ExampleView extends View {
     trace('clicked');
   }
 
-  public function template() return Scout.html('
+  public function render() return Scout.html('
     <button class='click-me'>Clicky</button>
     <p>${model.greeting} ${model.location}</p>
+  ');
+
+}
+
+class MainView extends View {
+
+  @:attr var model:ExampleModel;
+  
+  // Child views can be created using attributes, like this.
+  // They'll always be initialized last, so you can pass in
+  // properties like `model` and be sure they'll exist.
+  @:attr var example:ExampleView = new ExampleView({
+    model: model
+  });
+
+  // To render a child view, simply pass it to the template. Scout
+  // will take care of the rest -- it will even make sure child 
+  // views are maintained if the parent view re-renders.
+  public function render() return Scout.html('
+    <div class="some-random-div-why-not">${example}</div>
   ');
 
 }
@@ -91,7 +110,7 @@ class Main {
       greeting: 'Hello',
       location: 'World'
     });
-    var view = new ExampleView({ 
+    var view = new MainView({ 
       model: model
     });
 

@@ -31,12 +31,13 @@ class View implements Renderable {
       }
       return el;
     }
-    public var content(get, null):String;
+    public var content(get, set):String;
     public function get_content() return el.outerHTML;
+    public function set_content(content:String) return el.innerHTML = content;
     var events:Array<ViewEvent> = [];
     var delegatedEvents:Array<Dom.EventBinding> = [];
   #else
-    public var content(default, null):String;
+    public var content:String;
   #end
 
   public var isReady(get, never):Bool;
@@ -60,6 +61,10 @@ class View implements Renderable {
 
   public function __scout_render() return Template.html('');
 
+  public function __scout_doRender():Void {
+    content = __scout_render();
+  }
+
   public function shouldRender():Bool {
     return true;
   }
@@ -67,11 +72,7 @@ class View implements Renderable {
   public function render() {
     if (shouldRender()) {
       beforeRender.dispatch(this);
-      #if js
-        el.innerHTML = __scout_render();
-      #else
-        content = generateHtml();
-      #end
+      __scout_doRender();
       afterRender.dispatch(this);
     }
     return this;
@@ -144,11 +145,7 @@ class View implements Renderable {
   #else
 
     public function toRenderResult():RenderResult {
-      return generateHtml();
-    }
-
-    function generateHtml() {
-      return __scout_render();
+      return render().content;
     }
 
   #end

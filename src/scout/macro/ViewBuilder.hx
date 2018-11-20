@@ -65,18 +65,18 @@ class ViewBuilder {
             if (f.name == 'tag') hasTagName = true; 
             if (f.name == 'sel') hasSelName = true;
 
-            for (option in options) switch (option) {
-              case AttrRender(s):
-                if (f.name == 'className' && s == null) s = 'class';
-                if (s == null) s = f.name;
-                renderableAttrs.set(f.name, s);
-              case AttrObserve(target):
-                if (target == null) target = 'render';
-                initializers.push(macro this.states.$name.subscribe(function (_) $i{target}()));
-              case AttrOptional:
-                isOptional = true;
-              default:
-            }
+            // for (option in options) switch (option) {
+            //   case AttrRender(s):
+            //     if (f.name == 'className' && s == null) s = 'class';
+            //     if (s == null) s = f.name;
+            //     renderableAttrs.set(f.name, s);
+            //   case AttrObserve(target):
+            //     if (target == null) target = 'render';
+            //     initializers.push(macro this.states.$name.subscribe(function (_) $i{target}()));
+            //   case AttrOptional:
+            //     isOptional = true;
+            //   default:
+            // }
 
             addAttr(f.name, t, e, f.pos, isOptional, options);
             return false;
@@ -160,11 +160,6 @@ class ViewBuilder {
       pos: Context.currentPos()
     });
 
-    // var attrBuilders = [ for (attr in attrs) {
-    //   var key = attr.name;
-    //   macro if (attrs.$key != null) this.$key = attrs.$key;
-    // } ];
-
     if (isJs) {
       return fields.concat((macro class {
 
@@ -190,6 +185,8 @@ class ViewBuilder {
           }
         }
 
+        // todo: maybe override __scout_doRender to update the El as well?
+
       }).fields);
     }
 
@@ -201,13 +198,13 @@ class ViewBuilder {
         $b{initializers};
       }
 
-      override function generateHtml() {
-        var options:Dynamic = {}
+      override function __scout_doRender() {
+        var options:Dynamic = {};
         $b{ [ for (attr in renderableAttrs.keys()) {
           var name = { expr:EConst(CString(renderableAttrs.get(attr))), pos: Context.currentPos() };
           macro Reflect.setField(options, ${name}, $i{attr});
         } ] }
-        return new scout.Element(tag, options, [
+        content = new scout.Element(tag, options, [
           scout.Template.safe(__scout_render())
         ]).toRenderResult();
       }
@@ -281,6 +278,19 @@ class ViewBuilder {
       pos: pos
     });
 
+    for (option in options) switch (option) {
+      case AttrRender(s):
+        if (name == 'className' && s == null) s = 'class';
+        if (s == null) s = name;
+        renderableAttrs.set(name, s);
+      case AttrObserve(target):
+        if (target == null) target = 'render';
+        initializers.push(macro this.states.$name.subscribe(function (_) $i{target}()));
+      case AttrOptional:
+        isOptional = true;
+      default:
+    }
+
     var type = t.toType();
     var viewType = Context.getType('scout.View');
     var init = e != null ? macro attrs.$name != null ? attrs.$name : ${e} : macro attrs.$name;
@@ -290,18 +300,6 @@ class ViewBuilder {
     } else {
       attrInitializers.push(macro this.states.$name = new scout.State(${init}));
     }
-    // for (option in options) switch (option) {
-    //   case AttrChild:
-    //     // Note: pushing ot initializers to ensure that children are called last.
-    //     initializers.push(macro {
-    //       var __v = ${init};
-    //       __v.setParent(this);
-    //       this.states.$name = new scout.State(__v);
-    //     });
-    //     return;
-    //   default:
-    // }
-    // attrInitializers.push(macro this.states.$name = new scout.State(${init}));
   }
 
   private function extractAttrOptions(meta:MetadataEntry):Array<AttrOptions> {

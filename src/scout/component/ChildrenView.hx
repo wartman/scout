@@ -5,6 +5,10 @@ import scout.Template.html;
 
 using Lambda;
 
+typedef ChildrenViewOptions = {
+  ?silent:Bool
+};
+
 class ChildrenView<T:View> extends View {
 
   @:attr var tag:String = 'div';
@@ -15,19 +19,23 @@ class ChildrenView<T:View> extends View {
     for (child in body) add(child);
   }
 
-  public function add(child:T) {
+  public function add(child:T, ?options:ChildrenViewOptions) {
+    if (options == null) options = {};
+    if (options.silent == null) options.silent = false;
     child.setParent(this);
     if (!body.has(child)) body.push(child);
-    render();
+    if (!options.silent) render();
   }
 
-  public function delete(child:T) {
+  public function delete(child:T, ?options:ChildrenViewOptions) {
+    if (options == null) options = {};
+    if (options.silent == null) options.silent = false;
     if (body.has(child)) {
       #if js
         child.remove();
       #end
       body = body.filter(function (i) return i != child);
-      render();
+      if (!options.silent) render();
     }
   }
 

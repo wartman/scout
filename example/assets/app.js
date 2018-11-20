@@ -865,11 +865,17 @@ scout_View.prototype = {
 	,get_content: function() {
 		return this.el.outerHTML;
 	}
+	,set_content: function(content) {
+		return this.el.innerHTML = content;
+	}
 	,get_isReady: function() {
 		return window.document.contains(this.el);
 	}
 	,__scout_render: function() {
 		return scout__$RenderResult_RenderResult_$Impl_$._new("");
+	}
+	,__scout_doRender: function() {
+		this.set_content(this.__scout_render());
 	}
 	,shouldRender: function() {
 		return true;
@@ -877,7 +883,7 @@ scout_View.prototype = {
 	,render: function() {
 		if(this.shouldRender()) {
 			scout__$Signal_Signal_$Impl_$.dispatch(this.beforeRender,this);
-			this.el.innerHTML = this.__scout_render();
+			this.__scout_doRender();
 			scout__$Signal_Signal_$Impl_$.dispatch(this.afterRender,this);
 		}
 		return this;
@@ -900,8 +906,8 @@ scout_View.prototype = {
 		while(_g < _g1.length) {
 			var listener = _g1[_g];
 			++_g;
-			var this1 = listener.signal;
-			this1.slots = this1.slots.filter((function(listener1) {
+			var this2 = listener.signal;
+			this2.slots = this2.slots.filter((function(listener1) {
 				return function(slot) {
 					return slot.listener != listener1[0];
 				};
@@ -1229,6 +1235,7 @@ todo_view_App.prototype = $extend(scout_View.prototype,{
 		if(this.el == null) {
 			this.set_el(window.document.createElement(this.states.tag.get()));
 			this.el.setAttribute("id",this.states.id.get());
+			this.el.setAttribute("class",this.states.className.get());
 		}
 	}
 	,get_title: function() {

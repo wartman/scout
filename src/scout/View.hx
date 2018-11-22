@@ -1,6 +1,6 @@
 package scout;
 
-#if js
+#if (js && !nodejs)
   import js.html.Element;
 
   typedef ViewEvent = {
@@ -10,7 +10,7 @@ package scout;
   };
 #end
 
-#if js
+#if (js && !nodejs)
   @:autoBuild(scout.macro.ViewBuilder.buildJs())
 #else
   @:autoBuild(scout.macro.ViewBuilder.buildSys())
@@ -19,7 +19,7 @@ class View implements Renderable implements Mountable {
 
   static var autoIdIndex:Int = 0;
 
-  #if js
+  #if (js && !nodejs)
     @:isVar public var el(default, set):Element;
     public function set_el(el:Element) {
       if (delegatedEvents.length > 0) {
@@ -42,7 +42,7 @@ class View implements Renderable implements Mountable {
 
   public var isReady(get, never):Bool;
   public inline function get_isReady():Bool {
-    #if js
+    #if (js && !nodejs)
       return js.Browser.document.contains(el);
     #else
       return true;
@@ -55,7 +55,7 @@ class View implements Renderable implements Mountable {
   public var onReady(default, null):Signal<View> = new Signal();
   public var onRemove(default, null):Signal<View> = new Signal();
   var parent:View;
-  #if js
+  #if (js && !nodejs)
     var parentListeners:Array<Signal.SignalSlot<View>> = [];
   #end
 
@@ -81,7 +81,7 @@ class View implements Renderable implements Mountable {
   public function setParent(view:View) {
     detachFromParent();
     parent = view;
-    #if js
+    #if (js && !nodejs)
       parentListeners = [
         parent.onRemove.add(function (_) remove()),
         parent.beforeRender.add(function (_) detach()),
@@ -91,7 +91,7 @@ class View implements Renderable implements Mountable {
   }
 
   public function detachFromParent() {
-    #if js
+    #if (js && !nodejs)
       for (listener in parentListeners) listener.remove();
       parentListeners = [];
       detach();
@@ -99,7 +99,7 @@ class View implements Renderable implements Mountable {
     parent = null;
   }
 
-  #if js
+  #if (js && !nodejs)
 
     public function toRenderResult():RenderResult {
       if (parent != null) {

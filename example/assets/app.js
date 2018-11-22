@@ -1000,8 +1000,8 @@ scout_View.prototype = {
 		while(_g < _g1.length) {
 			var listener = _g1[_g];
 			++_g;
-			var this2 = listener.signal;
-			this2.slots = this2.slots.filter((function(listener1) {
+			var this1 = listener.signal;
+			this1.slots = this1.slots.filter((function(listener1) {
 				return function(slot) {
 					return slot.listener != listener1[0];
 				};

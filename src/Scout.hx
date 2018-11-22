@@ -1,4 +1,5 @@
 typedef View = scout.View;
+typedef Children<T:View> = scout.Children<T>;
 typedef Model = scout.Model;
 typedef ModelCollection<T:Model> = scout.ModelCollection<T>; 
 typedef Template = scout.Template;

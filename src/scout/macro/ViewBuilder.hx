@@ -29,6 +29,7 @@ class ViewBuilder {
   var hasClassName:Bool = false;
   var hasTagName:Bool = false;
   var hasSelName:Bool = false;
+  var viewType = Context.getType('scout.Mountable');
 
   public function new(fields:Array<Field>, isJs:Bool) {
     this.fields = fields;
@@ -50,7 +51,6 @@ class ViewBuilder {
           var metaNames = [ ':attr', ':attribute' ];
           if (f.meta.hasMeta(metaNames)) {
 
-            var name = f.name;
             var metas = f.meta.extractMeta(metaNames);
             if (metas.length > 1) {
               Context.error('A var may only have one :attr or :attribute metadata entry', f.pos);
@@ -64,19 +64,6 @@ class ViewBuilder {
             }
             if (f.name == 'tag') hasTagName = true; 
             if (f.name == 'sel') hasSelName = true;
-
-            // for (option in options) switch (option) {
-            //   case AttrRender(s):
-            //     if (f.name == 'className' && s == null) s = 'class';
-            //     if (s == null) s = f.name;
-            //     renderableAttrs.set(f.name, s);
-            //   case AttrObserve(target):
-            //     if (target == null) target = 'render';
-            //     initializers.push(macro this.states.$name.subscribe(function (_) $i{target}()));
-            //   case AttrOptional:
-            //     isOptional = true;
-            //   default:
-            // }
 
             addAttr(f.name, t, e, f.pos, isOptional, options);
             return false;
@@ -292,8 +279,8 @@ class ViewBuilder {
     }
 
     var type = t.toType();
-    var viewType = Context.getType('scout.View');
     var init = e != null ? macro attrs.$name != null ? attrs.$name : ${e} : macro attrs.$name;
+    
     if (Context.unify(type, viewType)) {
       // Note: child views are ALWAYS added last.
       initializers.push(macro this.states.$name = new scout.Child(this, ${init}));

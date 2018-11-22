@@ -13,7 +13,8 @@ class App extends View {
     store: store
   });
   @:attr var list:TodoList = new TodoList({
-    store: store
+    store: store,
+    body: []
   });
 
   public function render() return Scout.html('

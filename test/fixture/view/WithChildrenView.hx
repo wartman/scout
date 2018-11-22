@@ -1,20 +1,17 @@
 package fixture.view;
 
 import scout.View;
-import scout.component.ListView;
+import scout.Children;
 import scout.Template.html;
 
 class WithChildrenView extends View {
 
-  @:attr var body:ListView<ChildView> = new ListView({
-    className: 'children',
-    items: [
-      new ChildView({ message: 'Hey' }),
-      new ChildView({ message: 'World' })
-    ]
-  });
+  @:attr var body:Children<ChildView> = new Children([
+    new ChildView({ message: 'Hey' }),
+    new ChildView({ message: 'World' })
+  ]);
 
   public function render()
-    return html('${body}');
+    return html('<li class="children">${body}</li>');
 
 }

@@ -15,7 +15,7 @@ package scout;
 #else
   @:autoBuild(scout.macro.ViewBuilder.buildSys())
 #end
-class View implements Renderable {
+class View implements Renderable implements Mountable {
 
   static var autoIdIndex:Int = 0;
 
@@ -103,6 +103,7 @@ class View implements Renderable {
 
     public function toRenderResult():RenderResult {
       if (parent != null) {
+        // return new scout.Element(tag, { id: cid }, []).toRenderResult();
         return Template.html('<div id="$cid"></div>');
       }
       return render().content;

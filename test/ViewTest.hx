@@ -15,20 +15,16 @@ class ViewTest extends TestCase {
     public function testReal() {
       assertTrue(true);
       var view = new WithConstructorChildrenView({
-        body: new scout.component.ChildrenView({
-          className: 'foo',
-          tag: 'ul',
-          body: [
-            cast new ChildView({ message: 'Hey' }),
-            cast new ChildView({ message: 'World' }),
-            cast new scout.component.ListView({
-              items: [
-                cast new ChildView({ message: 'Hey' }),
-                cast new ChildView({ message: 'World' })
-              ]
-            }) 
-          ]
-        })
+        body: [
+          new ChildView({ message: 'Hey' }),
+          new ChildView({ message: 'World' }),
+          new WithConstructorChildrenView({
+            body: [
+              new ChildView({ message: 'Hey' }),
+              new ChildView({ message: 'World' })
+            ]
+          })
+        ]
       });
       view.render();
       js.Browser.document.querySelector('#Root').appendChild(view.el);
@@ -49,6 +45,20 @@ class ViewTest extends TestCase {
     bar.render();
     assertEquals(
       '<div><ulclass="children"><liclass="child">Hey</li><liclass="child">World</li></ul></div>', 
+      bar.content.clean()
+    );
+  }
+
+  public function testChildrenPassedAsArray() {
+    var bar = new WithChildrenView({
+      body: [ 
+        new ChildView({ message: 'Hey' }),
+        new ChildView({ message: 'World' }),
+        new ChildView({ message: 'sup' })
+      ]
+    });
+    assertEquals(
+      '<div><ulclass="children"><liclass="child">Hey</li><liclass="child">World</li><liclass="child">sup</li></ul></div>', 
       bar.content.clean()
     );
   }

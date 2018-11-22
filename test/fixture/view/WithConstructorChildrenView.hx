@@ -1,13 +1,13 @@
 package fixture.view;
 
 import scout.View;
-import scout.component.ChildrenView;
+import scout.Children;
 import scout.Template.html;
 
 class WithConstructorChildrenView extends View {
 
-  @:attr var body:ChildrenView<View> = new ChildrenView({});
+  @:attr var body:Children<View>;
 
-  public function render() return html('${body}');
+  public function render() return html('<ul>${body}</ul>');
 
 }

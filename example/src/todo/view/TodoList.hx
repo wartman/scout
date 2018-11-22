@@ -1,18 +1,14 @@
 package todo.view;
 
 import Scout;
-import scout.component.ListView;
 import todo.model.Store;
 import todo.model.Todo;
-
-using Lambda;
 
 class TodoList extends View {
 
   @:attr var className:String = 'todo-list-wrapper';
   @:attr var store:Store;
-  @:attr var body:ListView<TodoItem> = new ListView({ className: 'todo-list' });
-  var shouldInitializeFooter:Bool = true;
+  @:attr var body:Children<TodoItem>;
 
   @:init
   private function initializeViews() {
@@ -23,34 +19,18 @@ class TodoList extends View {
 
   @:observe(store.todos.onAdd)
   public function addTodo(todo:Todo) {
-    body.add(new TodoItem({ 
+    body.prepend(new TodoItem({ 
       sel: '#Todo-${todo.id}',
       id: 'Todo-${todo.id}',
       todo: todo, 
       store: store 
     }));
-
-    // Note: this is NOT the best way to handle this, but
-    //       it demonstrates that Scout will preserve child 
-    //       views when re-rendering a parent. 
-    if (shouldInitializeFooter) {
-      shouldInitializeFooter = false;
-      render();
-    }
   }
 
   @:observe(store.todos.onRemove)
   public function removeTodo(todo:Todo) {
-    var view = body.items.find(function (view) return view.todo == todo);
-    if (view != null) body.delete(view);
-    
-    // Note: this is NOT the best way to handle this, but
-    //       it demonstrates that Scout will preserve child 
-    //       views when re-rendering a parent. 
-    if (store.todos.length == 0) {
-      shouldInitializeFooter = true;
-      render();
-    }
+    var view = body.find(function (view) return view.todo == todo);
+    if (view != null) body.remove(view);
   }
 
   @:js
@@ -77,7 +57,9 @@ class TodoList extends View {
   }
 
   public function render() return Scout.html('
-    ${body}
+    <ul class="todo-list">
+      ${body}
+    </ul>
     ${footer()}
   ');
 

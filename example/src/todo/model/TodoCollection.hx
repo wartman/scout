@@ -1,5 +1,5 @@
 package todo.model;
 
-import scout.ModelCollection;
+import scout.Collection;
 
-typedef TodoCollection = ModelCollection<Todo>;
+typedef TodoCollection = Collection<Todo>;

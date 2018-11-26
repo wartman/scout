@@ -1,13 +1,15 @@
 package todo.view;
 
-import Scout;
+import scout.View;
 import todo.model.Store;
 import todo.model.Todo;
 
+@:el(
+  tag = 'header',
+  className = 'header'
+)
 class Header extends View {
 
-  @:attr var tag:String = 'header';
-  @:attr var className:String = 'header';
   @:attr var title:String;
   @:attr var store:Store;
 
@@ -23,9 +25,9 @@ class Header extends View {
     }
   }
 
-  public function render() return Scout.html('
+  public function render() '
     <h1>${title}</h1>
     <input class="new-todo" placeholder="What needs doing?" />
-  ');
+  ';
 
 }

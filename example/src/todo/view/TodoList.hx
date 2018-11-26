@@ -1,12 +1,17 @@
 package todo.view;
 
-import Scout;
+import scout.View;
+import scout.Children;
 import todo.model.Store;
 import todo.model.Todo;
 
+@:el(
+  sel = sel,
+  className = 'todo-list-wrapper'
+)
 class TodoList extends View {
 
-  @:attr var className:String = 'todo-list-wrapper';
+  @:attr @:optional var sel:String;
   @:attr var store:Store;
   @:attr var body:Children<TodoItem>;
 
@@ -34,7 +39,7 @@ class TodoList extends View {
   }
 
   @:js
-  @:observe(store.states.todosRemaining)
+  @:observe(store.props.todosRemaining)
   private function updateCount(remaining:Int) {
     var count = el.querySelector('.todo-count');
     if (count == null) return;
@@ -56,14 +61,14 @@ class TodoList extends View {
     store.visible = VisiblePending;
   }
 
-  public function render() return Scout.html('
+  public function render() '
     <ul class="todo-list">
       ${body}
     </ul>
     ${footer()}
-  ');
+  ';
 
-  function footer() return if ( store.todos.length > 0 ) Scout.html('
+  function footer() return if ( store.todos.length > 0 ) scout.Template.html('
     <footer class="footer">
       <span class="todo-count">${ todoCount(store.todosRemaining) }</span>
       <ul class="filters">
@@ -72,12 +77,12 @@ class TodoList extends View {
         <li><a href="#pending" class="filter-pending">Pending</a></li>
       </ul>
     </footer>  
-  ') else Scout.html('');
+  ') else scout.Template.html('');
 
   function todoCount(remaining:Int) return switch (remaining) { 
-    case 0: Scout.html('No items left');
-    case 1: Scout.html('1 item left');
-    default: Scout.html('${remaining} items left');
+    case 0: scout.Template.html('No items left');
+    case 1: scout.Template.html('1 item left');
+    default: scout.Template.html('${remaining} items left');
   }
 
 }

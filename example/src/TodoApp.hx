@@ -1,4 +1,3 @@
-import Scout;
 import todo.model.*;
 import todo.view.App;
 
@@ -10,14 +9,14 @@ class TodoApp {
     });
 
     var app = new App({
-      sel: '#App',
+      sel: '#Root',
       title: 'Todo',
       store: store
     });
 
     #if js
-      Scout.mount('#Root', app);
-    #else 
+      app.render();
+    #else
       Sys.print('
         <!DOCTYPE html>
         <html>

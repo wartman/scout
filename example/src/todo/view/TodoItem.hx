@@ -1,14 +1,19 @@
 package todo.view;
 
-import Scout;
+import scout.View;
 import todo.model.Todo;
 import todo.model.Store;
 
+@:el(
+  sel = sel,
+  tag = 'li',
+  className = 'todo-item',
+  id = id
+)
 class TodoItem extends View {
 
-  @:attr var className:String = 'todo-item';
-  @:attr(tag) var id:String;
-  @:attr var tag:String = 'li';
+  @:attr @:optional var sel:String;
+  @:attr var id:String;
   @:attr var todo:Todo;
   @:attr var store:Store;
   
@@ -61,7 +66,7 @@ class TodoItem extends View {
   }
 
   @:js
-  @:observe(todo.states.editing)
+  @:observe(todo.props.editing)
   public function toggleEditMode(_) {
     if (todo.editing) {
       el.classList.add('editing');
@@ -72,8 +77,8 @@ class TodoItem extends View {
   }
 
   @:js
-  @:observe(store.states.visible)
-  @:observe(todo.states.completed)
+  @:observe(store.props.visible)
+  @:observe(todo.props.completed)
   public function isVisible(_:Dynamic) {
     switch (store.visible) {
       case VisibleAll: show();
@@ -92,13 +97,13 @@ class TodoItem extends View {
     el.setAttribute('style', 'display:none;');
   }
 
-  public function render() return Scout.html('
+  public function render() '
     <input class="edit" type="text" value="${todo.label}" />
     <div class="view">
       <input class="toggle" type="checkbox"${ todo.completed ? " checked" : "" } />
       <label>${todo.label}</label>
       <button class="destroy"></button>
     </div>
-  ');
+  ';
 
 }

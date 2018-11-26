@@ -1,26 +1,18 @@
--cp src
--cp test
+-cp refactor/src
+-cp refactor/test
+-lib hexunit
 
 --each
 
 -main Run
 -js dst/test.js
 
+# --next
+
+# -main Run
+# -php dst/test/php
+
 --next
-
--main Run
--D php7
--php dst/test/php
-
---next
-
 -cp example/src
 -main TodoApp
 -js example/assets/app.js
-
---next
-
--cp example/src
--main TodoApp
--D php7
--php example/lib

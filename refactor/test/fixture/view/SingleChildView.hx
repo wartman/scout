@@ -6,6 +6,7 @@ class SingleChildView extends View {
 
   @:attr var child:SimpleView;
 
-  public function render() '<div class="content">${child}</div>';
+  public function render() 
+    '<div class="content">${child}</div>';
 
 }

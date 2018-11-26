@@ -1,7 +1,7 @@
 package todo.view;
 
 import scout.View;
-import scout.Children;
+import scout.EfficientChildren;
 import todo.model.Store;
 import todo.model.Todo;
 
@@ -13,29 +13,32 @@ class TodoList extends View {
 
   @:attr @:optional var sel:String;
   @:attr var store:Store;
-  @:attr var body:Children<TodoItem>;
-
-  @:init
-  private function initializeViews() {
-    for (todo in store.todos) {
-      addTodo(todo);
-    }
-  }
+  @:attr var body:EfficientChildren<TodoItem> = new EfficientChildren({
+    children: [ for (todo in store.todos) makeTodo(todo) ],
+    tag: 'ul',
+    className: 'todo-list'
+  });
 
   @:observe(store.todos.onAdd)
   public function addTodo(todo:Todo) {
-    body.prepend(new TodoItem({ 
+    if (body.length == 0) render();
+    body.prepend(makeTodo(todo));
+  }
+
+  function makeTodo(todo:Todo) {
+    return new TodoItem({ 
       sel: '#Todo-${todo.id}',
       id: 'Todo-${todo.id}',
       todo: todo, 
       store: store 
-    }));
+    });
   }
 
   @:observe(store.todos.onRemove)
   public function removeTodo(todo:Todo) {
-    var view = body.find(function (view) return view.todo == todo);
-    if (view != null) body.remove(view);
+    var view = body.findChild(function (view) return view.todo == todo);
+    if (view != null) body.removeChild(view);
+    if (body.length == 0) render();
   }
 
   @:js
@@ -62,9 +65,7 @@ class TodoList extends View {
   }
 
   public function render() '
-    <ul class="todo-list">
-      ${body}
-    </ul>
+    ${body}
     ${footer()}
   ';
 

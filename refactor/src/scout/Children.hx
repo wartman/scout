@@ -6,6 +6,8 @@ private class ChildrenImpl<T:Child> implements Renderable implements Child {
 
   var parent:Child;
   var children:Array<T> = [];
+  public var length(get, never):Int;
+  public function get_length() return children.length;
 
   public function new(?children:Array<T>) {
     if (children != null) {
@@ -93,8 +95,6 @@ private class ChildrenImpl<T:Child> implements Renderable implements Child {
   public function iterator():Array<T> {
     return children;
   }
-
-  public function getAttachmentPoint() return toRenderResult();
 
   public function toRenderResult() return Template.html('${children}');
 

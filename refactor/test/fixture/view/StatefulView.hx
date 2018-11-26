@@ -7,6 +7,8 @@ class StatefulView extends View {
   @:state var foo:String;
 
   @:observe(foo)
-  public function render() return html('<p>${foo}</p>');
+  function doRender(_) render();
+
+  public function render() '${foo}';
 
 }

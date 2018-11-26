@@ -38,7 +38,8 @@ class TodoItem extends View {
 
   @:js
   public function update() {
-    todo.label = cast(el.querySelector('.edit'), js.html.InputElement).value;
+    var edit:js.html.InputElement = cast el.querySelector('.edit'); 
+    todo.label = edit.value;
     todo.editing = false;
     render();
   }

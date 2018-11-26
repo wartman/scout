@@ -56,5 +56,55 @@ class ViewTest {
     bar.render().content.equals(expected);
   }
 
+  @Test
+  public function testStatefulView() {
+    var view = new StatefulView({ foo: 'foo' });
+    view.render().content.equals('<div>foo</div>');
+    view.foo = 'bar';
+    // Note that we don't render again!
+    view.content.equals('<div>bar</div>');
+  }
+
+  @Test
+  public function testStateChild() {
+    var bar = new SingleStateChildView({
+      child: new SimpleView({
+        location: 'World',
+        greeting: 'Hello'
+      })
+    });
+    var expected = '<div><div class="content"><div><p>Hello World</p></div></div></div>';
+    bar.render().content.equals(expected);
+    // test rerendering
+    bar.render().content.equals(expected);
+    
+    expected = '<div><div class="content"><div><p>Goodbye World</p></div></div></div>';
+    bar.child = new SimpleView({
+      location: 'World',
+      greeting: 'Goodbye'
+    });
+    bar.content.equals(expected);
+    // test rerendering
+    bar.render().content.equals(expected);
+  }
+
+  @Test
+  public function testModelView() {
+    var view = new WithModelView({ model: new fixture.model.SimpleModel({ name: 'foo', value: 'bar' }) });
+    view.render().content.equals('<div>foo bar</div>');
+    view.model.name = 'bar';
+    view.model.value = 'foo';
+    // Note that we don't render again!
+    view.content.equals('<div>bar foo</div>');
+  }
+
+  @Test
+  public function testModelStateView() {
+    var view = new WithModelStateView({ model: new fixture.model.SimpleModel({ name: 'foo', value: 'bar' }) });
+    view.render().content.equals('<div>foo bar</div>');
+    view.model = new fixture.model.SimpleModel({ name: 'bar', value: 'foo' });
+    // Note that we don't render again!
+    view.content.equals('<div>bar foo</div>');
+  }
 
 }

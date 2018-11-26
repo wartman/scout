@@ -38,7 +38,6 @@ class ViewBuilder {
   var constructorFields:Array<Field> = [];
   var attrs:Array<Field> = [];
   var states:Array<Field> = [];
-  var children:Array<Field> = [];
   var attrInitializers:Array<Expr> = [];
   var initializers:Array<Expr> = [];
   var eventBindings:Array<Expr> = [];
@@ -80,7 +79,7 @@ class ViewBuilder {
             }
             default: Context.error('Invalid expression', e.pos);
           }
-          default: Context.error('Only assignments are allowed here', e.pos);
+          default: Context.error('Invalid expression', e.pos);
         }
         c.meta.remove(meta.name);
       }
@@ -140,12 +139,10 @@ class ViewBuilder {
     var conAttrArgType = TAnonymous(constructorFields);
     var statesType = TAnonymous(states);
     var attrsType = TAnonymous(attrs);
-    var childrenType = TAnonymous(children);
 
     fields = fields.concat((macro class {
       public final states:$statesType;
-      public final attrs:$attrsType;
-      public final __scout_children:$childrenType;
+      final attrs:$attrsType;
     }).fields);
 
     if (isJs) {
@@ -154,7 +151,6 @@ class ViewBuilder {
         public function new(attrs:$conAttrArgType) {
           this.states = cast {};
           this.attrs = cast {};
-          this.__scout_children = cast {};
           $b{attrInitializers};
           __scout_ensureEl();
           $b{initializers};
@@ -259,41 +255,24 @@ class ViewBuilder {
   function makeFieldsForAttr(f:Field, t:ComplexType, ?e:Expr):Array<Field> {
     var isOptional = f.meta.hasEntry([ ':optional' ]) || e != null;
     constructorFields.push(Common.makeConstructorField(f.name, t, f.pos, isOptional));
+    attrs.push(Common.makeValue(f.name, t, f.pos));
     
     if (Context.unify(t.toType(), childType)) {
       var name = f.name;
       var init = e == null
         ? macro attrs.$name
         : macro attrs.$name == null ? ${e} : attrs.$name;
-      children.push(Common.makeValue(f.name, t, f.pos));
       initializers.push(macro {
         var __c = ${init};
         __c.setParent(this);
-        this.__scout_children.$name = __c;
+        this.attrs.$name = __c;
       });
-      return [
-        Common.makeProp(f.name, t, f.pos, true),
-        Common.makeSetter(f.name, t, macro {
-          if (__scout_children.$name == value) {
-            return value;
-          }
-          if (__scout_children.$name != null) {
-            __scout_children.$name.detachFromParent();
-          }
-          __scout_children.$name = value;
-          __scout_children.$name.setParent(this);
-          return value;
-        }, f.pos),
-        Common.makeValueGetter('__scout_children', f.name, t, f.pos)
-      ];
+    } else {
+      attrInitializers.push(Common.makeValueInitializer('attrs', 'attrs', f.name, t, e));
     }
-
-    attrs.push(Common.makeValue(f.name, t, f.pos));
-    attrInitializers.push(Common.makeValueInitializer('attrs', 'attrs', f.name, t, e));
     return [
-      Common.makeProp(f.name, t, f.pos, true),
-      Common.makeValueGetter('attrs', f.name, t, f.pos),
-      Common.makeValueSetter('attrs', f.name, t, f.pos)
+      Common.makeProp(f.name, t, f.pos, false),
+      Common.makeValueGetter('attrs', f.name, t, f.pos)
     ];
   }
 

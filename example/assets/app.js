@@ -341,119 +341,16 @@ js_Boot.__isNativeObj = function(o) {
 js_Boot.__resolveNativeClass = function(name) {
 	return $global[name];
 };
-var scout_Child = function() { };
-scout_Child.__name__ = true;
-scout_Child.prototype = {
-	__class__: scout_Child
-};
 var scout_Renderable = function() { };
 scout_Renderable.__name__ = true;
 scout_Renderable.prototype = {
 	__class__: scout_Renderable
 };
-var scout__$Children_ChildrenImpl = function(children) {
-	this.children = [];
-	if(children != null) {
-		this.children = children;
-	}
-};
-scout__$Children_ChildrenImpl.__name__ = true;
-scout__$Children_ChildrenImpl.__interfaces__ = [scout_Child,scout_Renderable];
-scout__$Children_ChildrenImpl.prototype = {
-	setParent: function(parent) {
-		this.parent = parent;
-		var _g = 0;
-		var _g1 = this.children;
-		while(_g < _g1.length) {
-			var view = _g1[_g];
-			++_g;
-			view.setParent(this.parent);
-		}
-	}
-	,detachFromParent: function() {
-		var _g = 0;
-		var _g1 = this.children;
-		while(_g < _g1.length) {
-			var view = _g1[_g];
-			++_g;
-			view.detachFromParent();
-		}
-	}
-	,add: function(view) {
-		view.setParent(this.parent);
-		this.children.push(view);
-		if((this.parent instanceof scout_View)) {
-			var view1 = this.parent;
-			view1.render();
-		}
-	}
-	,prepend: function(view) {
-		view.setParent(this.parent);
-		this.children.unshift(view);
-		if((this.parent instanceof scout_View)) {
-			var view1 = this.parent;
-			view1.render();
-		}
-	}
-	,remove: function(view) {
-		var child = Lambda.find(this.children,function(c) {
-			return c == view;
-		});
-		if(child != null) {
-			child.detachFromParent();
-			if((child instanceof scout_View)) {
-				var view1 = child;
-				view1.remove();
-			}
-			HxOverrides.remove(this.children,child);
-			if((this.parent instanceof scout_View)) {
-				var view2 = this.parent;
-				view2.render();
-			}
-		}
-	}
-	,attach: function() {
-	}
-	,detach: function() {
-	}
-	,getAt: function(index) {
-		return this.children[index];
-	}
-	,has: function(view) {
-		return Lambda.has(this.children,view);
-	}
-	,find: function(cb) {
-		return Lambda.find(this.children,cb);
-	}
-	,map: function(cb) {
-		return this.children.map(cb);
-	}
-	,iterator: function() {
-		return this.children;
-	}
-	,getAttachmentPoint: function() {
-		return this.toRenderResult();
-	}
-	,toRenderResult: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("" + this.children.map(function(s) {
-			if(js_Boot.__instanceof(s,scout_Renderable)) {
-				return (js_Boot.__cast(s , scout_Renderable)).toRenderResult();
-			} else {
-				return StringTools.htmlEscape(Std.string(s));
-			}
-		}).join(""));
-	}
-	,__class__: scout__$Children_ChildrenImpl
-};
-var scout__$Children_Children_$Impl_$ = {};
-scout__$Children_Children_$Impl_$.__name__ = true;
-scout__$Children_Children_$Impl_$._new = function(children) {
-	var this1 = new scout__$Children_ChildrenImpl(children);
-	return this1;
-};
-scout__$Children_Children_$Impl_$.ofArray = function(children) {
-	var this1 = new scout__$Children_ChildrenImpl(children);
-	return this1;
+var scout_Child = function() { };
+scout_Child.__name__ = true;
+scout_Child.__interfaces__ = [scout_Renderable];
+scout_Child.prototype = {
+	__class__: scout_Child
 };
 var scout_Observable = function() { };
 scout_Observable.__name__ = true;
@@ -598,6 +495,190 @@ scout_Dom.html = function(el,html) {
 	el.innerHTML = html;
 	return el;
 };
+var scout_View = function() {
+	this.delegatedEvents = [];
+	this.events = [];
+	this.parentListeners = [];
+	this.onRemove = { slots : []};
+	this.onReady = { slots : []};
+	this.afterRender = { slots : []};
+	this.beforeRender = { slots : []};
+	this.cid = "__scout_view_" + scout_View.__scout_ids++;
+};
+scout_View.__name__ = true;
+scout_View.__interfaces__ = [scout_Child,scout_Renderable];
+scout_View.prototype = {
+	set_el: function(el) {
+		if(this.delegatedEvents.length > 0) {
+			this.undelegateEvents();
+		}
+		this.el = el;
+		if(this.events.length > 0) {
+			this.delegateEvents(this.events);
+		}
+		return el;
+	}
+	,get_content: function() {
+		return this.el.outerHTML;
+	}
+	,set_content: function(content) {
+		return this.el.innerHTML = content;
+	}
+	,__scout_render: function() {
+		return scout__$RenderResult_RenderResult_$Impl_$._new("");
+	}
+	,__scout_doRender: function() {
+		this.set_content(this.__scout_render());
+	}
+	,shouldRender: function() {
+		return true;
+	}
+	,render: function() {
+		if(this.shouldRender()) {
+			scout__$Signal_Signal_$Impl_$.dispatch(this.beforeRender,this);
+			this.__scout_doRender();
+			scout__$Signal_Signal_$Impl_$.dispatch(this.afterRender,this);
+		}
+		return this;
+	}
+	,setParent: function(parent) {
+		var _gthis = this;
+		this.detachFromParent();
+		this.parent = parent;
+		if((this.parent instanceof scout_View)) {
+			var view = this.parent;
+			this.parentListeners = [scout__$Signal_Signal_$Impl_$.add(view.onRemove,function(_) {
+				_gthis.remove();
+			}),scout__$Signal_Signal_$Impl_$.add(view.beforeRender,function(_1) {
+				_gthis.detach();
+			}),scout__$Signal_Signal_$Impl_$.add(view.afterRender,function(_2) {
+				_gthis.attach();
+			})];
+		}
+	}
+	,detachFromParent: function() {
+		var _g = 0;
+		var _g1 = this.parentListeners;
+		while(_g < _g1.length) {
+			var listener = _g1[_g];
+			++_g;
+			var this1 = listener.signal;
+			this1.slots = this1.slots.filter((function(listener1) {
+				return function(slot) {
+					return slot.listener != listener1[0];
+				};
+			})([listener.listener]));
+		}
+		this.parentListeners = [];
+		this.detach();
+		this.parent = null;
+	}
+	,toRenderResult: function() {
+		return scout__$RenderResult_RenderResult_$Impl_$._new("<div id=\"" + StringTools.htmlEscape(Std.string(this.cid)) + "\"></div>");
+	}
+	,detach: function() {
+		if(this.el.parentElement != null) {
+			this.el.parentElement.removeChild(this.el);
+		}
+	}
+	,attach: function() {
+		if(this.parent == null) {
+			return;
+		}
+		if((this.parent instanceof scout_View)) {
+			var view = this.parent;
+			var target = view.el.querySelector("#" + this.cid);
+			if(target != null) {
+				target.parentNode.replaceChild(this.render().el,target);
+			}
+		}
+	}
+	,remove: function() {
+		scout__$Signal_Signal_$Impl_$.dispatch(this.onRemove,this);
+		this.undelegateEvents();
+		this.el.remove();
+	}
+	,delegateEvents: function(events) {
+		var _g = 0;
+		while(_g < events.length) {
+			var event = events[_g];
+			++_g;
+			var e = scout_Dom.delegate(this.el,event.selector,event.action,event.method);
+			this.delegatedEvents.push(e);
+		}
+	}
+	,undelegateEvents: function() {
+		var _g = 0;
+		var _g1 = this.delegatedEvents;
+		while(_g < _g1.length) {
+			var binding = _g1[_g];
+			++_g;
+			binding.destroy();
+		}
+		this.delegatedEvents = [];
+	}
+	,__class__: scout_View
+};
+var scout_EfficientChildren = function(attrs) {
+	scout_View.call(this);
+	this.states = { };
+	this.attrs = { };
+	this.attrs.tag = attrs.tag != null ? attrs.tag : "ul";
+	this.attrs.className = attrs.className != null ? attrs.className : "";
+	this.attrs.children = attrs.children;
+	this.__scout_ensureEl();
+	this.delegateEvents(this.events);
+};
+scout_EfficientChildren.__name__ = true;
+scout_EfficientChildren.__super__ = scout_View;
+scout_EfficientChildren.prototype = $extend(scout_View.prototype,{
+	get_length: function() {
+		return this.get_children().length;
+	}
+	,add: function(child) {
+		this.get_children().push(child);
+		this.el.appendChild(child.render().el);
+	}
+	,prepend: function(child) {
+		this.get_children().unshift(child);
+		if(this.get_children().length > 0) {
+			this.el.insertBefore(child.render().el,this.el.firstChild);
+		} else {
+			this.el.appendChild(child.render().el);
+		}
+	}
+	,findChild: function(cb) {
+		return Lambda.find(this.get_children(),cb);
+	}
+	,getChildAt: function(index) {
+		return this.get_children()[index];
+	}
+	,removeChild: function(child) {
+		var c = this.findChild(function(c1) {
+			return c1 == child;
+		});
+		if(c != null) {
+			c.remove();
+		}
+		HxOverrides.remove(this.get_children(),child);
+	}
+	,__scout_ensureEl: function() {
+		if(this.el == null) {
+			this.set_el(window.document.createElement(this.get_tag()));
+			this.el.setAttribute("class",this.get_className());
+		}
+	}
+	,get_tag: function() {
+		return this.attrs.tag;
+	}
+	,get_className: function() {
+		return this.attrs.className;
+	}
+	,get_children: function() {
+		return this.attrs.children;
+	}
+	,__class__: scout_EfficientChildren
+});
 var scout_Model = function() { };
 scout_Model.__name__ = true;
 scout_Model.__interfaces__ = [scout_Observable];
@@ -673,6 +754,36 @@ scout_PropertyOfObservable.prototype = {
 		return scout__$Signal_Signal_$Impl_$.add(this.signal,cb);
 	}
 	,__class__: scout_PropertyOfObservable
+};
+var scout_PropertyOfChild = function(parent,target) {
+	this.signal = { slots : []};
+	this.parent = parent;
+	if(target != null) {
+		this.target = target;
+		target.setParent(this.parent);
+	}
+};
+scout_PropertyOfChild.__name__ = true;
+scout_PropertyOfChild.__interfaces__ = [scout_State];
+scout_PropertyOfChild.prototype = {
+	set: function(target) {
+		if(this.target == target) {
+			return;
+		}
+		if(this.target != null) {
+			this.target.detachFromParent();
+		}
+		this.target = target;
+		this.target.setParent(this.parent);
+		scout__$Signal_Signal_$Impl_$.dispatch(this.signal,this.target);
+	}
+	,get: function() {
+		return this.target;
+	}
+	,observe: function(cb) {
+		return scout__$Signal_Signal_$Impl_$.add(this.signal,cb);
+	}
+	,__class__: scout_PropertyOfChild
 };
 var scout__$RenderResult_RenderResult_$Impl_$ = {};
 scout__$RenderResult_RenderResult_$Impl_$.__name__ = true;
@@ -761,136 +872,6 @@ scout_Template.__name__ = true;
 scout_Template.safe = function(str) {
 	return new scout__$Template_SafeContent(str);
 };
-var scout_View = function() {
-	this.delegatedEvents = [];
-	this.events = [];
-	this.parentListeners = [];
-	this.onRemove = { slots : []};
-	this.onReady = { slots : []};
-	this.afterRender = { slots : []};
-	this.beforeRender = { slots : []};
-	this.cid = "__scout_view_" + scout_View.__scout_ids++;
-};
-scout_View.__name__ = true;
-scout_View.__interfaces__ = [scout_Child,scout_Renderable];
-scout_View.prototype = {
-	set_el: function(el) {
-		if(this.delegatedEvents.length > 0) {
-			this.undelegateEvents();
-		}
-		this.el = el;
-		if(this.events.length > 0) {
-			this.delegateEvents(this.events);
-		}
-		return el;
-	}
-	,get_content: function() {
-		return this.el.outerHTML;
-	}
-	,set_content: function(content) {
-		return this.el.innerHTML = content;
-	}
-	,__scout_render: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("");
-	}
-	,__scout_doRender: function() {
-		this.set_content(this.__scout_render());
-	}
-	,shouldRender: function() {
-		return true;
-	}
-	,render: function() {
-		if(this.shouldRender()) {
-			scout__$Signal_Signal_$Impl_$.dispatch(this.beforeRender,this);
-			this.__scout_doRender();
-			scout__$Signal_Signal_$Impl_$.dispatch(this.afterRender,this);
-		}
-		return this;
-	}
-	,setParent: function(parent) {
-		var _gthis = this;
-		this.detachFromParent();
-		this.parent = parent;
-		if((this.parent instanceof scout_View)) {
-			var view = this.parent;
-			this.parentListeners = [scout__$Signal_Signal_$Impl_$.add(view.onRemove,function(_) {
-				_gthis.remove();
-			}),scout__$Signal_Signal_$Impl_$.add(view.beforeRender,function(_1) {
-				_gthis.detach();
-			}),scout__$Signal_Signal_$Impl_$.add(view.afterRender,function(_2) {
-				_gthis.attach();
-			})];
-		}
-	}
-	,detachFromParent: function() {
-		var _g = 0;
-		var _g1 = this.parentListeners;
-		while(_g < _g1.length) {
-			var listener = _g1[_g];
-			++_g;
-			var this1 = listener.signal;
-			this1.slots = this1.slots.filter((function(listener1) {
-				return function(slot) {
-					return slot.listener != listener1[0];
-				};
-			})([listener.listener]));
-		}
-		this.parentListeners = [];
-		this.detach();
-		this.parent = null;
-	}
-	,getAttachmentPoint: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("<div id=\"" + StringTools.htmlEscape(Std.string(this.cid)) + "\"></div>");
-	}
-	,toRenderResult: function() {
-		if(this.parent != null) {
-			return this.getAttachmentPoint();
-		}
-		return this.render().get_content();
-	}
-	,detach: function() {
-		if(this.el.parentElement != null) {
-			this.el.parentElement.removeChild(this.el);
-		}
-	}
-	,attach: function() {
-		if(this.parent == null) {
-			return;
-		}
-		if((this.parent instanceof scout_View)) {
-			var view = this.parent;
-			var target = view.el.querySelector("#" + this.cid);
-			if(target != null) {
-				target.parentNode.replaceChild(this.render().el,target);
-			}
-		}
-	}
-	,remove: function() {
-		scout__$Signal_Signal_$Impl_$.dispatch(this.onRemove,this);
-		this.undelegateEvents();
-		this.el.remove();
-	}
-	,delegateEvents: function(events) {
-		var _g = 0;
-		while(_g < events.length) {
-			var event = events[_g];
-			++_g;
-			var e = scout_Dom.delegate(this.el,event.selector,event.action,event.method);
-			this.delegatedEvents.push(e);
-		}
-	}
-	,undelegateEvents: function() {
-		var _g = 0;
-		var _g1 = this.delegatedEvents;
-		while(_g < _g1.length) {
-			var binding = _g1[_g];
-			++_g;
-			binding.destroy();
-		}
-		this.delegatedEvents = [];
-	}
-	,__class__: scout_View
-};
 var todo_model_VisibleTodos = $hxEnums["todo.model.VisibleTodos"] = { __ename__ : true, __constructs__ : ["VisibleAll","VisibleCompleted","VisiblePending"]
 	,VisibleAll: {_hx_index:0,__enum__:"todo.model.VisibleTodos"}
 	,VisibleCompleted: {_hx_index:1,__enum__:"todo.model.VisibleTodos"}
@@ -901,7 +882,7 @@ var todo_model_Store = function(props) {
 	this.onChange = { slots : []};
 	this.props = { };
 	this.props.todos = new scout_PropertyOfObservable(props.todos);
-	this.props.editing = new scout_Property(props.editing);
+	this.props.editing = new scout_PropertyOfObservable(props.editing);
 	this.props.visible = new scout_Property(props.visible != null ? props.visible : todo_model_VisibleTodos.VisibleAll);
 	this.props.todosRemaining = new scout_Property(props.todosRemaining);
 	var tmp;
@@ -1073,7 +1054,6 @@ var todo_view_App = function(attrs) {
 	scout_View.call(this);
 	this.states = { };
 	this.attrs = { };
-	this.__scout_children = { };
 	this.attrs.sel = attrs.sel;
 	this.attrs.title = attrs.title;
 	this.attrs.store = attrs.store;
@@ -1081,17 +1061,10 @@ var todo_view_App = function(attrs) {
 	this.__scout_ensureEl();
 	var __c = attrs.header == null ? new todo_view_Header({ title : this.get_title(), store : this.get_store()}) : attrs.header;
 	__c.setParent(this);
-	this.__scout_children.header = __c;
-	var __c1;
-	if(attrs.list == null) {
-		var __c2 = this.get_store();
-		var this1 = new scout__$Children_ChildrenImpl([]);
-		__c1 = new todo_view_TodoList({ store : __c2, body : this1});
-	} else {
-		__c1 = attrs.list;
-	}
+	this.attrs.header = __c;
+	var __c1 = attrs.list == null ? new todo_view_TodoList({ store : this.get_store()}) : attrs.list;
 	__c1.setParent(this);
-	this.__scout_children.list = __c1;
+	this.attrs.list = __c1;
 	this.delegateEvents(this.events);
 };
 todo_view_App.__name__ = true;
@@ -1113,58 +1086,20 @@ todo_view_App.prototype = $extend(scout_View.prototype,{
 	,get_sel: function() {
 		return this.attrs.sel;
 	}
-	,set_sel: function(value) {
-		this.attrs.sel = value;
-		return value;
-	}
 	,get_title: function() {
 		return this.attrs.title;
-	}
-	,set_title: function(value) {
-		this.attrs.title = value;
-		return value;
 	}
 	,get_store: function() {
 		return this.attrs.store;
 	}
-	,set_store: function(value) {
-		this.attrs.store = value;
-		return value;
-	}
 	,get_id: function() {
 		return this.attrs.id;
 	}
-	,set_id: function(value) {
-		this.attrs.id = value;
-		return value;
-	}
-	,set_header: function(value) {
-		if(this.__scout_children.header == value) {
-			return value;
-		}
-		if(this.__scout_children.header != null) {
-			this.__scout_children.header.detachFromParent();
-		}
-		this.__scout_children.header = value;
-		this.__scout_children.header.setParent(this);
-		return value;
-	}
 	,get_header: function() {
-		return this.__scout_children.header;
-	}
-	,set_list: function(value) {
-		if(this.__scout_children.list == value) {
-			return value;
-		}
-		if(this.__scout_children.list != null) {
-			this.__scout_children.list.detachFromParent();
-		}
-		this.__scout_children.list = value;
-		this.__scout_children.list.setParent(this);
-		return value;
+		return this.attrs.header;
 	}
 	,get_list: function() {
-		return this.__scout_children.list;
+		return this.attrs.list;
 	}
 	,__class__: todo_view_App
 });
@@ -1172,7 +1107,6 @@ var todo_view_Header = function(attrs) {
 	scout_View.call(this);
 	this.states = { };
 	this.attrs = { };
-	this.__scout_children = { };
 	this.attrs.title = attrs.title;
 	this.attrs.store = attrs.store;
 	this.__scout_ensureEl();
@@ -1202,16 +1136,8 @@ todo_view_Header.prototype = $extend(scout_View.prototype,{
 	,get_title: function() {
 		return this.attrs.title;
 	}
-	,set_title: function(value) {
-		this.attrs.title = value;
-		return value;
-	}
 	,get_store: function() {
 		return this.attrs.store;
-	}
-	,set_store: function(value) {
-		this.attrs.store = value;
-		return value;
 	}
 	,__class__: todo_view_Header
 });
@@ -1219,7 +1145,6 @@ var todo_view_TodoItem = function(attrs) {
 	scout_View.call(this);
 	this.states = { };
 	this.attrs = { };
-	this.__scout_children = { };
 	this.attrs.sel = attrs.sel;
 	this.attrs.id = attrs.id;
 	this.attrs.todo = attrs.todo;
@@ -1252,7 +1177,8 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 		this.update();
 	}
 	,update: function() {
-		this.get_todo().set_label((js_Boot.__cast(this.el.querySelector(".edit") , HTMLInputElement)).value);
+		var edit = this.el.querySelector(".edit");
+		this.get_todo().set_label(edit.value);
 		this.get_todo().set_editing(false);
 		this.render();
 	}
@@ -1325,30 +1251,14 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 	,get_sel: function() {
 		return this.attrs.sel;
 	}
-	,set_sel: function(value) {
-		this.attrs.sel = value;
-		return value;
-	}
 	,get_id: function() {
 		return this.attrs.id;
-	}
-	,set_id: function(value) {
-		this.attrs.id = value;
-		return value;
 	}
 	,get_todo: function() {
 		return this.attrs.todo;
 	}
-	,set_todo: function(value) {
-		this.attrs.todo = value;
-		return value;
-	}
 	,get_store: function() {
 		return this.attrs.store;
-	}
-	,set_store: function(value) {
-		this.attrs.store = value;
-		return value;
 	}
 	,__class__: todo_view_TodoItem
 });
@@ -1356,14 +1266,23 @@ var todo_view_TodoList = function(attrs) {
 	scout_View.call(this);
 	this.states = { };
 	this.attrs = { };
-	this.__scout_children = { };
 	this.attrs.sel = attrs.sel;
 	this.attrs.store = attrs.store;
 	this.__scout_ensureEl();
-	var __c = attrs.body;
+	var __c;
+	if(attrs.body == null) {
+		var _g = [];
+		var todo1 = this.get_store().get_todos().iterator();
+		while(todo1.hasNext()) {
+			var todo2 = todo1.next();
+			_g.push(this.makeTodo(todo2));
+		}
+		__c = new scout_EfficientChildren({ children : _g, tag : "ul", className : "todo-list"});
+	} else {
+		__c = attrs.body;
+	}
 	__c.setParent(this);
-	this.__scout_children.body = __c;
-	this.initializeViews();
+	this.attrs.body = __c;
 	scout__$Signal_Signal_$Impl_$.observe(this.get_store().get_todos().onAdd,$bind(this,this.addTodo));
 	scout__$Signal_Signal_$Impl_$.observe(this.get_store().get_todos().onRemove,$bind(this,this.removeTodo));
 	scout__$Signal_Signal_$Impl_$.observe(scout__$Signal_Signal_$Impl_$.ofState(this.get_store().props.todosRemaining),$bind(this,this.updateCount));
@@ -1375,22 +1294,24 @@ var todo_view_TodoList = function(attrs) {
 todo_view_TodoList.__name__ = true;
 todo_view_TodoList.__super__ = scout_View;
 todo_view_TodoList.prototype = $extend(scout_View.prototype,{
-	initializeViews: function() {
-		var todo1 = this.get_store().get_todos().iterator();
-		while(todo1.hasNext()) {
-			var todo2 = todo1.next();
-			this.addTodo(todo2);
+	addTodo: function(todo1) {
+		if(this.get_body().get_length() == 0) {
+			this.render();
 		}
+		this.get_body().prepend(this.makeTodo(todo1));
 	}
-	,addTodo: function(todo1) {
-		this.get_body().prepend(new todo_view_TodoItem({ sel : "#Todo-" + todo1.get_id(), id : "Todo-" + todo1.get_id(), todo : todo1, store : this.get_store()}));
+	,makeTodo: function(todo1) {
+		return new todo_view_TodoItem({ sel : "#Todo-" + todo1.get_id(), id : "Todo-" + todo1.get_id(), todo : todo1, store : this.get_store()});
 	}
 	,removeTodo: function(todo1) {
-		var view = this.get_body().find(function(view1) {
+		var view = this.get_body().findChild(function(view1) {
 			return view1.get_todo() == todo1;
 		});
 		if(view != null) {
-			this.get_body().remove(view);
+			this.get_body().removeChild(view);
+		}
+		if(this.get_body().get_length() == 0) {
+			this.render();
 		}
 	}
 	,updateCount: function(remaining) {
@@ -1410,7 +1331,7 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 		this.get_store().set_visible(todo_model_VisibleTodos.VisiblePending);
 	}
 	,__scout_render: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <ul class=\"todo-list\">\r\n      " + this.get_body().toRenderResult() + "\r\n    </ul>\r\n    " + this.footer() + "\r\n  ");
+		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    " + this.get_body().toRenderResult() + "\r\n    " + this.footer() + "\r\n  ");
 	}
 	,footer: function() {
 		if(this.get_store().get_todos().get_length() > 0) {
@@ -1442,30 +1363,11 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 	,get_sel: function() {
 		return this.attrs.sel;
 	}
-	,set_sel: function(value) {
-		this.attrs.sel = value;
-		return value;
-	}
 	,get_store: function() {
 		return this.attrs.store;
 	}
-	,set_store: function(value) {
-		this.attrs.store = value;
-		return value;
-	}
-	,set_body: function(value) {
-		if(this.__scout_children.body == value) {
-			return value;
-		}
-		if(this.__scout_children.body != null) {
-			this.__scout_children.body.detachFromParent();
-		}
-		this.__scout_children.body = value;
-		this.__scout_children.body.setParent(this);
-		return value;
-	}
 	,get_body: function() {
-		return this.__scout_children.body;
+		return this.attrs.body;
 	}
 	,__class__: todo_view_TodoList
 });

@@ -7,8 +7,6 @@ using haxe.macro.Tools;
 
 class Common {
 
-  static var observableType = Context.getType('scout.Observable');
-
   public static function makeObserverForState(propsName:String, prop:Expr, target:Expr) {
     return switch (prop.expr) {
       case EConst(CIdent(name)):
@@ -136,11 +134,16 @@ class Common {
   }
 
   public static function makeStateInitializer(argName:String, propsName:String, name:String, type:ComplexType, ?e:Expr) {
+    var observableType = Context.getType('scout.Observable');
+    var childType = Context.getType('scout.Child');
+
     var init = e != null 
       ? macro $p{[ argName, name ]} != null ? $p{[ argName, name ]} : ${e} 
       : macro $p{[ argName, name ]};
-
-    if (Context.unify(type.toType(), observableType)) {
+    
+    if (Context.unify(type.toType().follow(), childType)) {
+      return macro this.$propsName.$name = new scout.Property.PropertyOfChild(this, ${init});
+    } else if (Context.unify(type.toType().follow(), observableType)) {
       return macro this.$propsName.$name = new scout.Property.PropertyOfObservable(${init});
     } 
     
@@ -153,14 +156,6 @@ class Common {
       : macro $p{[ argName, name ]};
     
     return macro this.$propsName.$name = ${init};
-  }
-
-  public static function makeInitializer(argName:String, name:String, type:ComplexType, ?e:Expr) {
-    var init = e != null 
-      ? macro $p{[ argName, name ]} != null ? $p{[ argName, name ]} : ${e} 
-      : macro $p{[ argName, name ]};
-    
-    return macro this.$name = ${init};
   }
 
 }

@@ -15,8 +15,7 @@ class App extends View {
     store: store
   });
   @:attr var list:TodoList = new TodoList({
-    store: store,
-    body: []
+    store: store
   });
 
   public function render() '

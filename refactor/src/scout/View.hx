@@ -90,15 +90,12 @@ class View implements Renderable implements Child {
     parent = null;
   }
 
-  public function getAttachmentPoint():RenderResult {
-    return Template.html('<div id="$cid"></div>');
-  }
-
   public function toRenderResult():RenderResult {
-    #if js
-      if (parent != null) return getAttachmentPoint();
+    #if (js && !nodejs)
+      return Template.html('<div id="$cid"></div>');
+    #else
+      return render().content;
     #end
-    return render().content;
   }
 
   #if (js && !nodejs)

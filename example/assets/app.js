@@ -639,6 +639,25 @@ scout_EfficientChildrenImpl.prototype = $extend(scout_ChildrenImpl.prototype,{
 			view1.render();
 		}
 	}
+	,remove: function(view) {
+		var child = Lambda.find(this.children,function(c) {
+			return c == view;
+		});
+		if(child != null) {
+			child.detachFromParent();
+			if((child instanceof scout_View)) {
+				var view1 = child;
+				view1.remove();
+				HxOverrides.remove(this.children,child);
+				return;
+			}
+			HxOverrides.remove(this.children,child);
+			if((this.parent instanceof scout_View)) {
+				var view2 = this.parent;
+				view2.render();
+			}
+		}
+	}
 	,__class__: scout_EfficientChildrenImpl
 });
 var scout__$EfficientChildren_EfficientChildren_$Impl_$ = {};

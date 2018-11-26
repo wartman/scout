@@ -2,6 +2,8 @@ package scout;
 
 import scout.Children;
 
+using Lambda;
+
 class EfficientChildrenImpl<T:Child> extends ChildrenImpl<T> {
 
   override function add(view:T) {
@@ -43,6 +45,26 @@ class EfficientChildrenImpl<T:Child> extends ChildrenImpl<T> {
     if (Std.is(parent, View)) {
       var view:View = cast parent;
       view.render();
+    }
+  }
+  
+  override function remove(view:T) {
+    var child = children.find(function (c) return c == view);
+    if (child != null) {
+      child.detachFromParent();
+      #if (js && !nodejs)
+        if (Std.is(child, View)) { 
+          var view:View = cast child;
+          view.remove();
+          children.remove(child);
+          return;
+        }
+      #end
+      children.remove(child);
+      if (Std.is(parent, View)) {
+        var view:View = cast parent;
+        view.render();
+      }
     }
   }
 

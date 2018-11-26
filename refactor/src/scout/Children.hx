@@ -50,7 +50,7 @@ class ChildrenImpl<T:Child> implements Renderable implements Child {
     var child = children.find(function (c) return c == view);
     if (child != null) {
       child.detachFromParent();
-      #if js
+      #if (js && !nodejs)
         if (Std.is(child, View)) { 
           var view:View = cast child;
           view.remove();

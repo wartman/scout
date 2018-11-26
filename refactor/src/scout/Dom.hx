@@ -9,9 +9,13 @@ class Dom {
 
   private static var docNodeType:Int = 9;
 
-  // public static function css(el:Element, style:Dynamic) {
+  public static function addAfter(el:Element, target:Element) {
+    el.parentNode.insertBefore(target, el.nextSibling);
+  }
 
-  // }
+  public static function addBefore(el:Element, target:Element) {
+    el.parentNode.insertBefore(target, el);
+  }
 
   public static function delegate(el:Element, selector:Null<String>, type:String, cb:Event->Void, ?useCapture:Bool):EventBinding {
     function listener (e:Event) {

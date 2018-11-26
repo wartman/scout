@@ -352,6 +352,102 @@ scout_Child.__interfaces__ = [scout_Renderable];
 scout_Child.prototype = {
 	__class__: scout_Child
 };
+var scout_ChildrenImpl = function(children) {
+	this.children = [];
+	if(children != null) {
+		this.children = children;
+	}
+};
+scout_ChildrenImpl.__name__ = true;
+scout_ChildrenImpl.__interfaces__ = [scout_Child,scout_Renderable];
+scout_ChildrenImpl.prototype = {
+	get_length: function() {
+		return this.children.length;
+	}
+	,setParent: function(parent) {
+		this.parent = parent;
+		var _g = 0;
+		var _g1 = this.children;
+		while(_g < _g1.length) {
+			var view = _g1[_g];
+			++_g;
+			view.setParent(this.parent);
+		}
+	}
+	,detachFromParent: function() {
+		var _g = 0;
+		var _g1 = this.children;
+		while(_g < _g1.length) {
+			var view = _g1[_g];
+			++_g;
+			view.detachFromParent();
+		}
+	}
+	,add: function(view) {
+		view.setParent(this.parent);
+		this.children.push(view);
+		if((this.parent instanceof scout_View)) {
+			var view1 = this.parent;
+			view1.render();
+		}
+	}
+	,prepend: function(view) {
+		view.setParent(this.parent);
+		this.children.unshift(view);
+		if((this.parent instanceof scout_View)) {
+			var view1 = this.parent;
+			view1.render();
+		}
+	}
+	,remove: function(view) {
+		var child = Lambda.find(this.children,function(c) {
+			return c == view;
+		});
+		if(child != null) {
+			child.detachFromParent();
+			if((child instanceof scout_View)) {
+				var view1 = child;
+				view1.remove();
+			}
+			HxOverrides.remove(this.children,child);
+			if((this.parent instanceof scout_View)) {
+				var view2 = this.parent;
+				view2.render();
+			}
+		}
+	}
+	,getAt: function(index) {
+		return this.children[index];
+	}
+	,has: function(view) {
+		return Lambda.has(this.children,view);
+	}
+	,find: function(cb) {
+		return Lambda.find(this.children,cb);
+	}
+	,map: function(cb) {
+		return this.children.map(cb);
+	}
+	,iterator: function() {
+		return this.children;
+	}
+	,toRenderResult: function() {
+		return scout__$RenderResult_RenderResult_$Impl_$._new("" + this.children.map(function(r) {
+			return r.toRenderResult();
+		}).join(""));
+	}
+	,__class__: scout_ChildrenImpl
+};
+var scout__$Children_Children_$Impl_$ = {};
+scout__$Children_Children_$Impl_$.__name__ = true;
+scout__$Children_Children_$Impl_$._new = function(children) {
+	var this1 = new scout_ChildrenImpl(children);
+	return this1;
+};
+scout__$Children_Children_$Impl_$.ofArray = function(children) {
+	var this1 = new scout_ChildrenImpl(children);
+	return this1;
+};
 var scout_Observable = function() { };
 scout_Observable.__name__ = true;
 scout_Observable.prototype = {
@@ -458,6 +554,12 @@ scout_Collection.prototype = {
 };
 var scout_Dom = function() { };
 scout_Dom.__name__ = true;
+scout_Dom.addAfter = function(el,target) {
+	el.parentNode.insertBefore(target,el.nextSibling);
+};
+scout_Dom.addBefore = function(el,target) {
+	el.parentNode.insertBefore(target,el);
+};
 scout_Dom.delegate = function(el,selector,type,cb,useCapture) {
 	var listener = function(e) {
 		var del = scout_Dom.closest(e.target,selector);
@@ -495,190 +597,60 @@ scout_Dom.html = function(el,html) {
 	el.innerHTML = html;
 	return el;
 };
-var scout_View = function() {
-	this.delegatedEvents = [];
-	this.events = [];
-	this.parentListeners = [];
-	this.onRemove = { slots : []};
-	this.onReady = { slots : []};
-	this.afterRender = { slots : []};
-	this.beforeRender = { slots : []};
-	this.cid = "__scout_view_" + scout_View.__scout_ids++;
+var scout_EfficientChildrenImpl = function(children) {
+	scout_ChildrenImpl.call(this,children);
 };
-scout_View.__name__ = true;
-scout_View.__interfaces__ = [scout_Child,scout_Renderable];
-scout_View.prototype = {
-	set_el: function(el) {
-		if(this.delegatedEvents.length > 0) {
-			this.undelegateEvents();
-		}
-		this.el = el;
-		if(this.events.length > 0) {
-			this.delegateEvents(this.events);
-		}
-		return el;
-	}
-	,get_content: function() {
-		return this.el.outerHTML;
-	}
-	,set_content: function(content) {
-		return this.el.innerHTML = content;
-	}
-	,__scout_render: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("");
-	}
-	,__scout_doRender: function() {
-		this.set_content(this.__scout_render());
-	}
-	,shouldRender: function() {
-		return true;
-	}
-	,render: function() {
-		if(this.shouldRender()) {
-			scout__$Signal_Signal_$Impl_$.dispatch(this.beforeRender,this);
-			this.__scout_doRender();
-			scout__$Signal_Signal_$Impl_$.dispatch(this.afterRender,this);
-		}
-		return this;
-	}
-	,setParent: function(parent) {
-		var _gthis = this;
-		this.detachFromParent();
-		this.parent = parent;
-		if((this.parent instanceof scout_View)) {
-			var view = this.parent;
-			this.parentListeners = [scout__$Signal_Signal_$Impl_$.add(view.onRemove,function(_) {
-				_gthis.remove();
-			}),scout__$Signal_Signal_$Impl_$.add(view.beforeRender,function(_1) {
-				_gthis.detach();
-			}),scout__$Signal_Signal_$Impl_$.add(view.afterRender,function(_2) {
-				_gthis.attach();
-			})];
-		}
-	}
-	,detachFromParent: function() {
-		var _g = 0;
-		var _g1 = this.parentListeners;
-		while(_g < _g1.length) {
-			var listener = _g1[_g];
-			++_g;
-			var this1 = listener.signal;
-			this1.slots = this1.slots.filter((function(listener1) {
-				return function(slot) {
-					return slot.listener != listener1[0];
-				};
-			})([listener.listener]));
-		}
-		this.parentListeners = [];
-		this.detach();
-		this.parent = null;
-	}
-	,toRenderResult: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("<div id=\"" + StringTools.htmlEscape(Std.string(this.cid)) + "\"></div>");
-	}
-	,detach: function() {
-		if(this.el.parentElement != null) {
-			this.el.parentElement.removeChild(this.el);
-		}
-	}
-	,attach: function() {
-		if(this.parent == null) {
-			return;
-		}
-		if((this.parent instanceof scout_View)) {
-			var view = this.parent;
-			var target = view.el.querySelector("#" + this.cid);
-			if(target != null) {
-				target.parentNode.replaceChild(this.render().el,target);
+scout_EfficientChildrenImpl.__name__ = true;
+scout_EfficientChildrenImpl.__super__ = scout_ChildrenImpl;
+scout_EfficientChildrenImpl.prototype = $extend(scout_ChildrenImpl.prototype,{
+	add: function(view) {
+		view.setParent(this.parent);
+		if(this.children.length > 0) {
+			var last = this.children[this.children.length - 1];
+			this.children.push(view);
+			if((last instanceof scout_View) && (view instanceof scout_View)) {
+				var lastView = last;
+				var newView = view;
+				scout_Dom.addAfter(lastView.el,newView.render().el);
+				return;
 			}
 		}
-	}
-	,remove: function() {
-		scout__$Signal_Signal_$Impl_$.dispatch(this.onRemove,this);
-		this.undelegateEvents();
-		this.el.remove();
-	}
-	,delegateEvents: function(events) {
-		var _g = 0;
-		while(_g < events.length) {
-			var event = events[_g];
-			++_g;
-			var e = scout_Dom.delegate(this.el,event.selector,event.action,event.method);
-			this.delegatedEvents.push(e);
+		this.children.push(view);
+		if((this.parent instanceof scout_View)) {
+			var view1 = this.parent;
+			view1.render();
 		}
 	}
-	,undelegateEvents: function() {
-		var _g = 0;
-		var _g1 = this.delegatedEvents;
-		while(_g < _g1.length) {
-			var binding = _g1[_g];
-			++_g;
-			binding.destroy();
+	,prepend: function(view) {
+		view.setParent(this.parent);
+		if(this.children.length > 0) {
+			var first = this.children[0];
+			this.children.unshift(view);
+			if((first instanceof scout_View) && (view instanceof scout_View)) {
+				var firstView = first;
+				var newView = view;
+				scout_Dom.addBefore(firstView.el,newView.render().el);
+				return;
+			}
 		}
-		this.delegatedEvents = [];
-	}
-	,__class__: scout_View
-};
-var scout_EfficientChildren = function(attrs) {
-	scout_View.call(this);
-	this.states = { };
-	this.attrs = { };
-	this.attrs.tag = attrs.tag != null ? attrs.tag : "ul";
-	this.attrs.className = attrs.className != null ? attrs.className : "";
-	this.attrs.children = attrs.children;
-	this.__scout_ensureEl();
-	this.delegateEvents(this.events);
-};
-scout_EfficientChildren.__name__ = true;
-scout_EfficientChildren.__super__ = scout_View;
-scout_EfficientChildren.prototype = $extend(scout_View.prototype,{
-	get_length: function() {
-		return this.get_children().length;
-	}
-	,add: function(child) {
-		this.get_children().push(child);
-		this.el.appendChild(child.render().el);
-	}
-	,prepend: function(child) {
-		this.get_children().unshift(child);
-		if(this.get_children().length > 0) {
-			this.el.insertBefore(child.render().el,this.el.firstChild);
-		} else {
-			this.el.appendChild(child.render().el);
+		this.children.unshift(view);
+		if((this.parent instanceof scout_View)) {
+			var view1 = this.parent;
+			view1.render();
 		}
 	}
-	,findChild: function(cb) {
-		return Lambda.find(this.get_children(),cb);
-	}
-	,getChildAt: function(index) {
-		return this.get_children()[index];
-	}
-	,removeChild: function(child) {
-		var c = this.findChild(function(c1) {
-			return c1 == child;
-		});
-		if(c != null) {
-			c.remove();
-		}
-		HxOverrides.remove(this.get_children(),child);
-	}
-	,__scout_ensureEl: function() {
-		if(this.el == null) {
-			this.set_el(window.document.createElement(this.get_tag()));
-			this.el.setAttribute("class",this.get_className());
-		}
-	}
-	,get_tag: function() {
-		return this.attrs.tag;
-	}
-	,get_className: function() {
-		return this.attrs.className;
-	}
-	,get_children: function() {
-		return this.attrs.children;
-	}
-	,__class__: scout_EfficientChildren
+	,__class__: scout_EfficientChildrenImpl
 });
+var scout__$EfficientChildren_EfficientChildren_$Impl_$ = {};
+scout__$EfficientChildren_EfficientChildren_$Impl_$.__name__ = true;
+scout__$EfficientChildren_EfficientChildren_$Impl_$._new = function(children) {
+	var this1 = new scout_EfficientChildrenImpl(children);
+	return this1;
+};
+scout__$EfficientChildren_EfficientChildren_$Impl_$.ofArray = function(children) {
+	var this1 = new scout_EfficientChildrenImpl(children);
+	return this1;
+};
 var scout_Model = function() { };
 scout_Model.__name__ = true;
 scout_Model.__interfaces__ = [scout_Observable];
@@ -873,6 +845,130 @@ var scout_Template = function() { };
 scout_Template.__name__ = true;
 scout_Template.safe = function(str) {
 	return new scout__$Template_SafeContent(str);
+};
+var scout_View = function() {
+	this.delegatedEvents = [];
+	this.events = [];
+	this.parentListeners = [];
+	this.onRemove = { slots : []};
+	this.onReady = { slots : []};
+	this.afterRender = { slots : []};
+	this.beforeRender = { slots : []};
+	this.cid = "__scout_view_" + scout_View.__scout_ids++;
+};
+scout_View.__name__ = true;
+scout_View.__interfaces__ = [scout_Child,scout_Renderable];
+scout_View.prototype = {
+	set_el: function(el) {
+		if(this.delegatedEvents.length > 0) {
+			this.undelegateEvents();
+		}
+		this.el = el;
+		if(this.events.length > 0) {
+			this.delegateEvents(this.events);
+		}
+		return el;
+	}
+	,get_content: function() {
+		return this.el.outerHTML;
+	}
+	,set_content: function(content) {
+		return this.el.innerHTML = content;
+	}
+	,__scout_render: function() {
+		return scout__$RenderResult_RenderResult_$Impl_$._new("");
+	}
+	,__scout_doRender: function() {
+		this.set_content(this.__scout_render());
+	}
+	,shouldRender: function() {
+		return true;
+	}
+	,render: function() {
+		if(this.shouldRender()) {
+			scout__$Signal_Signal_$Impl_$.dispatch(this.beforeRender,this);
+			this.__scout_doRender();
+			scout__$Signal_Signal_$Impl_$.dispatch(this.afterRender,this);
+		}
+		return this;
+	}
+	,setParent: function(parent) {
+		var _gthis = this;
+		this.detachFromParent();
+		this.parent = parent;
+		if((this.parent instanceof scout_View)) {
+			var view = this.parent;
+			this.parentListeners = [scout__$Signal_Signal_$Impl_$.add(view.onRemove,function(_) {
+				_gthis.remove();
+			}),scout__$Signal_Signal_$Impl_$.add(view.beforeRender,function(_1) {
+				_gthis.detach();
+			}),scout__$Signal_Signal_$Impl_$.add(view.afterRender,function(_2) {
+				_gthis.attach();
+			})];
+		}
+	}
+	,detachFromParent: function() {
+		var _g = 0;
+		var _g1 = this.parentListeners;
+		while(_g < _g1.length) {
+			var listener = _g1[_g];
+			++_g;
+			var this2 = listener.signal;
+			this2.slots = this2.slots.filter((function(listener1) {
+				return function(slot) {
+					return slot.listener != listener1[0];
+				};
+			})([listener.listener]));
+		}
+		this.parentListeners = [];
+		this.detach();
+		this.parent = null;
+	}
+	,toRenderResult: function() {
+		return scout__$RenderResult_RenderResult_$Impl_$._new("<div id=\"" + StringTools.htmlEscape(Std.string(this.cid)) + "\"></div>");
+	}
+	,detach: function() {
+		if(this.el.parentElement != null) {
+			this.el.parentElement.removeChild(this.el);
+		}
+	}
+	,attach: function() {
+		if(this.parent == null) {
+			return;
+		}
+		if((this.parent instanceof scout_View)) {
+			var view = this.parent;
+			var target = view.el.querySelector("#" + this.cid);
+			if(target != null) {
+				target.parentNode.replaceChild(this.render().el,target);
+			}
+		}
+	}
+	,remove: function() {
+		scout__$Signal_Signal_$Impl_$.dispatch(this.onRemove,this);
+		this.undelegateEvents();
+		this.el.remove();
+	}
+	,delegateEvents: function(events) {
+		var _g = 0;
+		while(_g < events.length) {
+			var event = events[_g];
+			++_g;
+			var e = scout_Dom.delegate(this.el,event.selector,event.action,event.method);
+			this.delegatedEvents.push(e);
+		}
+	}
+	,undelegateEvents: function() {
+		var _g = 0;
+		var _g1 = this.delegatedEvents;
+		while(_g < _g1.length) {
+			var binding = _g1[_g];
+			++_g;
+			binding.destroy();
+		}
+		this.delegatedEvents = [];
+	}
+	,__class__: scout_View
 };
 var todo_model_VisibleTodos = $hxEnums["todo.model.VisibleTodos"] = { __ename__ : true, __constructs__ : ["VisibleAll","VisibleCompleted","VisiblePending"]
 	,VisibleAll: {_hx_index:0,__enum__:"todo.model.VisibleTodos"}
@@ -1279,7 +1375,8 @@ var todo_view_TodoList = function(attrs) {
 			var todo2 = todo1.next();
 			_g.push(this.makeTodo(todo2));
 		}
-		__c = new scout_EfficientChildren({ children : _g, tag : "ul", className : "todo-list"});
+		var this1 = new scout_EfficientChildrenImpl(_g);
+		__c = this1;
 	} else {
 		__c = attrs.body;
 	}
@@ -1306,11 +1403,11 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 		return new todo_view_TodoItem({ sel : "#Todo-" + todo1.get_id(), id : "Todo-" + todo1.get_id(), todo : todo1, store : this.get_store()});
 	}
 	,removeTodo: function(todo1) {
-		var view = this.get_body().findChild(function(view1) {
+		var view = this.get_body().find(function(view1) {
 			return view1.get_todo() == todo1;
 		});
 		if(view != null) {
-			this.get_body().removeChild(view);
+			this.get_body().remove(view);
 		}
 		if(this.get_body().get_length() == 0) {
 			this.render();
@@ -1333,7 +1430,7 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 		this.get_store().set_visible(todo_model_VisibleTodos.VisiblePending);
 	}
 	,__scout_render: function() {
-		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    " + this.get_body().toRenderResult() + "\r\n    " + this.footer() + "\r\n  ");
+		return scout__$RenderResult_RenderResult_$Impl_$._new("\r\n    <ul class=\"todo-list\">\r\n      " + this.get_body().toRenderResult() + "\r\n    </ul>\r\n    " + this.footer() + "\r\n  ");
 	}
 	,footer: function() {
 		if(this.get_store().get_todos().get_length() > 0) {

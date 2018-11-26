@@ -13,11 +13,9 @@ class TodoList extends View {
 
   @:attr @:optional var sel:String;
   @:attr var store:Store;
-  @:attr var body:EfficientChildren<TodoItem> = new EfficientChildren({
-    children: [ for (todo in store.todos) makeTodo(todo) ],
-    tag: 'ul',
-    className: 'todo-list'
-  });
+  @:attr var body:EfficientChildren<TodoItem> 
+    = new EfficientChildren([ for (todo in store.todos) makeTodo(todo) ]);
+    
 
   @:observe(store.todos.onAdd)
   public function addTodo(todo:Todo) {
@@ -36,8 +34,8 @@ class TodoList extends View {
 
   @:observe(store.todos.onRemove)
   public function removeTodo(todo:Todo) {
-    var view = body.findChild(function (view) return view.todo == todo);
-    if (view != null) body.removeChild(view);
+    var view = body.find(function (view) return view.todo == todo);
+    if (view != null) body.remove(view);
     if (body.length == 0) render();
   }
 
@@ -65,7 +63,9 @@ class TodoList extends View {
   }
 
   public function render() '
-    ${body}
+    <ul class="todo-list">
+      ${body}
+    </ul>
     ${footer()}
   ';
 

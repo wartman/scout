@@ -2,7 +2,7 @@ package scout;
 
 using Lambda;
 
-private class ChildrenImpl<T:Child> implements Renderable implements Child {
+class ChildrenImpl<T:Child> implements Renderable implements Child {
 
   var parent:Child;
   var children:Array<T> = [];
@@ -63,18 +63,6 @@ private class ChildrenImpl<T:Child> implements Renderable implements Child {
       }
     }
   }
-
-  #if js
-
-    public function attach() {
-      // void
-    }
-
-    public function detach() {
-      // void
-    }
-
-  #end
 
   public function getAt(index:Int) {
     return children[index];

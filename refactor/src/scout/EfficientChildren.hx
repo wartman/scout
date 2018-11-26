@@ -1,54 +1,61 @@
 package scout;
 
-@:el(
-  tag = tag,
-  className = className
-)
-class EfficientChildren<T:View> extends View {
+import scout.Children;
 
-  @:attr var tag:String = 'ul';
-  @:attr var className:String = '';
-  @:attr var children:Array<T>;
+class EfficientChildrenImpl<T:Child> extends ChildrenImpl<T> {
 
-  public var length(get, null):Int;
-  public function get_length() return children.length;
-
-  public function add(child:T) {
-    children.push(child);
-    #if (js && !nodejs)
-      el.appendChild(child.render().el);
-    #end
-  }
-
-  public function prepend(child:T) {
-    children.unshift(child);
+  override function add(view:T) {
+    view.setParent(parent);
     #if (js && !nodejs)
       if (children.length > 0) {
-        el.insertBefore(child.render().el, el.firstChild);
-      } else {
-        el.appendChild(child.render().el);
+        var last = children[children.length - 1];
+        children.push(view);
+        if (Std.is(last, View) && Std.is(view, View)) {
+          var lastView:View = cast last;
+          var newView:View = cast view;
+          Dom.addAfter(lastView.el, newView.render().el);
+          return;
+        }
       }
     #end
+    children.push(view);
+    if (Std.is(parent, View)) {
+      var view:View = cast parent;
+      view.render();
+    }
   }
 
-  public function findChild(cb:(child:T)->Bool):Null<T> {
-    return Lambda.find(children, cb);
-  }
-
-  public function getChildAt(index:Int):Null<T> {
-    return children[index];
-  }
-
-  public function removeChild(child:T) {
-    #if js
-      var c = findChild(c -> c == child);
-      if (c != null) c.remove();
+  override function prepend(view:T) {
+    view.setParent(parent);
+    #if (js && !nodejs)
+      if (children.length > 0) {
+        var first = children[0];
+        children.unshift(view);
+        if (Std.is(first, View) && Std.is(view, View)) {
+          var firstView:View = cast first;
+          var newView:View = cast view;
+          Dom.addBefore(firstView.el, newView.render().el);
+          return;
+        }
+      }
     #end
-    children.remove(child);
+    children.unshift(view);
+    if (Std.is(parent, View)) {
+      var view:View = cast parent;
+      view.render();
+    }
   }
 
-  #if (sys || nodejs)
-    public function render() '${children}';
-  #end
+}
+
+@:forward
+abstract EfficientChildren<T:Child>(EfficientChildrenImpl<T>) to Child to Renderable {
+
+  public inline function new(?children:Array<T>) { 
+    this = new EfficientChildrenImpl(children);
+  }
+
+  @:from public static inline function ofArray<T:Child>(children:Array<T>) 
+    return new EfficientChildren(children);
 
 }

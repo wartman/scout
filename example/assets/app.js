@@ -742,9 +742,11 @@ scout_PropertyOfObservable.prototype = {
 				return slot.listener != listener;
 			});
 		}
-		this.lastSlot = value.observe(function(_) {
-			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.signal,value);
-		});
+		if(value != null) {
+			this.lastSlot = value.observe(function(_) {
+				scout__$Signal_Signal_$Impl_$.dispatch(_gthis.signal,value);
+			});
+		}
 		scout__$Signal_Signal_$Impl_$.dispatch(this.signal,value);
 	}
 	,get: function() {

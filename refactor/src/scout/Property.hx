@@ -50,9 +50,11 @@ class PropertyOfObservable<T:Observable<M>, M> implements State<T> {
     if (lastSlot != null) {
       lastSlot.remove();
     }
-    lastSlot = value.observe(function (_) {
-      this.signal.dispatch(value);
-    });
+    if (value != null) {
+      lastSlot = value.observe(function (_) {
+        this.signal.dispatch(value);
+      });
+    }
     signal.dispatch(value);
   }
 

@@ -3,10 +3,9 @@ package todo.view;
 import scout.View;
 import todo.model.Store;
 
-@:el(sel = sel, id = id)
+@:el( sel, id = id )
 class App extends View {
 
-  @:attr var sel:String;
   @:attr var title:String;
   @:attr var store:Store;
   @:attr var id:String = 'App';

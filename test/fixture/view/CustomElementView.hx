@@ -5,7 +5,7 @@ import scout.View;
 @:el(
   tag = 'span',
   id = cid,
-  className = 'foo',
+  className,
   'data-foo' = foo,
   'data-bar' = 'bar'
 )

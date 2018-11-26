@@ -1,14 +1,13 @@
 package fixture.view;
 
 import scout.View;
-import scout.Template.html;
 
 class SimpleView extends View {
 
-  @:attr var className:String = 'foo';
-  @:attr var tag:String = 'section';
-  @:attr var key:String;
+  @:attr var greeting:String = 'hello';
+  @:attr var location:String = 'world';
 
-  public function render() return html(key);
+  public function render() 
+    '<p>${greeting} ${location}</p>';
 
 }

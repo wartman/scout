@@ -9,10 +9,6 @@ class Dom {
 
   private static var docNodeType:Int = 9;
 
-  // public static function css(el:Element, style:Dynamic) {
-
-  // }
-
   public static function delegate(el:Element, selector:Null<String>, type:String, cb:Event->Void, ?useCapture:Bool):EventBinding {
     function listener (e:Event) {
       var del = closest(cast e.target, selector);

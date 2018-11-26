@@ -1,9 +1,9 @@
 package scout;
 
 @:forward
-abstract SignalSlot<T>({ listener:T->Void, signal:Signal<T>, once:Bool }) {
+abstract SignalSlot<T>({ listener:(value:T)->Void, signal:Signal<T>, once:Bool }) {
 
-  public inline function new(listener:T->Void, signal:Signal<T>, once:Bool = false) {
+  public inline function new(listener:(value:T)->Void, signal:Signal<T>, once:Bool = false) {
     this = {
       listener: listener,
       signal: signal,
@@ -19,30 +19,32 @@ abstract SignalSlot<T>({ listener:T->Void, signal:Signal<T>, once:Bool }) {
 
 abstract Signal<T>({ slots: Array<SignalSlot<T>> }) {
 
-  public static function observe<T>(signal:Signal<T>, cb:T->Void) {
-    signal.add(cb);
+  public static inline function observe<T>(obs:Observable<T>, cb:(value:T)->Void) {
+    obs.observe(cb);
   }
 
-  @:from public static function ofStateful<T>(state:Stateful<T>):Signal<T> {
-    return state.signal;
+  @:to public function toObservable():Observable<T> {
+    return cast {
+      observe: (cb:(value:T)->Void) -> add(cb) 
+    };
   }
 
   public inline function new() {
     this = { slots: [] };
   }
 
-  public function add(listener:T->Void, once:Bool = false):SignalSlot<T> {
+  public function add(listener:(value:T)->Void, once:Bool = false):SignalSlot<T> {
     var slot = new SignalSlot(listener, cast this, once);
     this.slots.push(slot);
     return slot;
   }
 
-  public inline function once(listener:T->Void):SignalSlot<T> {
+  public inline function once(listener:(value:T)->Void):SignalSlot<T> {
     return add(listener, true);
   }
 
-  public inline function remove(listener:T->Void) {
-    this.slots = this.slots.filter(function (slot) return slot.listener != listener);
+  public inline function remove(listener:(value:T)->Void) {
+    this.slots = this.slots.filter(slot -> slot.listener != listener);
   }
 
   public function dispatch(data:T) {

@@ -5,13 +5,9 @@ import scout.EfficientChildren;
 import todo.model.Store;
 import todo.model.Todo;
 
-@:el(
-  sel = sel,
-  className = 'todo-list-wrapper'
-)
+@:el( sel, className = 'todo-list-wrapper' )
 class TodoList extends View {
 
-  @:attr @:optional var sel:String;
   @:attr var store:Store;
   @:attr var body:EfficientChildren<TodoItem> 
     = new EfficientChildren([ for (todo in store.todos) makeTodo(todo) ]);

@@ -1,11 +1,14 @@
-import haxe.unit.TestCase;
-import scout.ModelCollection;
+package scout;
+
 import fixture.model.SimpleModel;
 
-class ModelCollectionTest extends TestCase {
+using hex.unittest.assertion.Assert;
 
+class CollectionTest {
+
+  @Test
   public function testBasics() {
-    var collection:ModelCollection<SimpleModel> = new ModelCollection([
+    var collection:Collection<SimpleModel> = new Collection([
       new SimpleModel({
         id:1,
         name: 'foo',
@@ -13,15 +16,16 @@ class ModelCollectionTest extends TestCase {
       })
     ]);
     var model = collection.get(1);
-    assertEquals('foo', model.name);
-    assertTrue(collection.exists(model));
-    assertTrue(collection.has(function (m) return m.value == model.value));
+    model.name.equals('foo');
+    collection.exists(model).isTrue();
+    collection.has(function (m) return m.value == model.value).isTrue();
     collection.remove(model);
-    assertFalse(collection.exists(model));
+    collection.exists(model).isFalse();
   }
 
+  @Test
   public function testDoesNotAddDups() {
-    var collection:ModelCollection<SimpleModel> = new ModelCollection();
+    var collection:Collection<SimpleModel> = new Collection();
     var model = new SimpleModel({
       id:1,
       name: 'foo',
@@ -29,11 +33,12 @@ class ModelCollectionTest extends TestCase {
     });
     collection.add(model);
     collection.add(model);
-    assertEquals(1, collection.length);
+    collection.length.equals(1);
   }
 
+  @Test
   public function testAddRemoveLifecycle() {
-    var collection:ModelCollection<SimpleModel> = new ModelCollection([
+    var collection:Collection<SimpleModel> = new Collection([
       new SimpleModel({
         id:1,
         name: 'foo',
@@ -42,8 +47,8 @@ class ModelCollectionTest extends TestCase {
     ]);
     var onAdd:Int = 0;
     var onRemove:Int = 0;
-    collection.onAdd.add(function (_) onAdd++);
-    collection.onRemove.add(function (_) onRemove++);
+    collection.onAdd.add(_ -> onAdd++);
+    collection.onRemove.add(_ -> onRemove++);
     var model = new SimpleModel({
       id: 2,
       name: 'bin',
@@ -51,12 +56,13 @@ class ModelCollectionTest extends TestCase {
     });
     collection.add(model);
     collection.remove(model);
-    assertEquals(1, onAdd);
-    assertEquals(1, onRemove);
+    onAdd.equals(1);
+    onRemove.equals(1);
   }
 
+  @Test
   public function testModelChanges() {
-    var collection:ModelCollection<SimpleModel> = new ModelCollection();
+    var collection:Collection<SimpleModel> = new Collection();
     var changed:Int = 0;
     var model = new SimpleModel({
       id:1,
@@ -64,19 +70,19 @@ class ModelCollectionTest extends TestCase {
       value: 'bar'
     });
     
-    collection.subscribe(function (_) changed++);
+    collection.observe(_ -> changed++);
     
     collection.add(model);
     model.name = 'changed';
     model.value = 'changed';
     // `3` because `add` dispatched an `onChange` event too.
-    assertEquals(3, changed);
+    changed.equals(3);
 
     collection.remove(model);
     model.name = 'changed again';
     model.value = 'changed again';
     // 4 becasue `remove` dispatched an `onChange` event too.
-    assertEquals(4, changed);
+    changed.equals(4);
   }
 
 }

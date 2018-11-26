@@ -3,7 +3,7 @@ package scout;
 class Property<T> implements State<T> {
   
   var value:T;
-  public final signal:Signal<T> = new Signal();
+  final signal:Signal<T> = new Signal();
 
   public function new(?value:T) {
     this.value = value;
@@ -31,7 +31,7 @@ class PropertyOfObservable<T:Observable<M>, M> implements State<T> {
 
   var value:T;
   var lastSlot:Signal.SignalSlot<M>;
-  public final signal:Signal<T> = new Signal();
+  final signal:Signal<T> = new Signal();
 
   public function new(?value:T) {
     if (value != null) {
@@ -72,7 +72,7 @@ class PropertyOfChild<T:Child> implements State<T> {
 
   var parent:View;
   var target:T;
-  public final signal:Signal<T> = new Signal();
+  final signal:Signal<T> = new Signal();
 
   public function new(parent:View, ?target:T) {
     this.parent = parent;

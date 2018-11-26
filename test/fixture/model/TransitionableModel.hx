@@ -4,7 +4,6 @@ import scout.Model;
 
 class TransitionableModel implements Model {
   
-  @:prop var id:Int;
   @:prop var name:String;
   @:prop var value:String;
 

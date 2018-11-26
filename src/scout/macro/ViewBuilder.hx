@@ -1,329 +1,330 @@
 package scout.macro;
 
 import haxe.macro.Expr;
+import haxe.macro.Type.ClassType;
 import haxe.macro.Context;
 
-using Lambda;
-using scout.macro.MacroTools;
+using scout.macro.MetadataTools;
 using haxe.macro.Tools;
 
 class ViewBuilder {
+  
+  static final attrMetaNames = [ ':attr', ':attribute' ];
+  static final stateMetaNames = [ ':state' ];
+  static final elMetaNames = [ ':el', ':element' ];
+  static final compMetaNames = [ ':comp', ':computed' ];
+  static final observeMetaNames = [ ':observe' ];
+  static var childType = Context.getType('scout.Child');
+  static var processed:Array<ClassType> = [];
 
   public static function buildJs() {
-    return new ViewBuilder(Context.getBuildFields(), true).export();
+    return new ViewBuilder(
+      Context.getLocalClass().get(),
+      Context.getBuildFields(), 
+      true
+    ).export();
   }
 
   public static function buildSys() {
-    return new ViewBuilder(Context.getBuildFields(), false).export();
+    return new ViewBuilder(
+      Context.getLocalClass().get(),
+      Context.getBuildFields(),
+      false
+    ).export();
   }
 
+  var c:ClassType;
   var fields:Array<Field>;
+  var constructorFields:Array<Field> = [];
   var attrs:Array<Field> = [];
-  var states:Array<Field> = [];
-  var renderableAttrs:Map<String, String> = new Map();
   var attrInitializers:Array<Expr> = [];
-  var childInitializers:Array<Expr> = [];
   var initializers:Array<Expr> = [];
   var eventBindings:Array<Expr> = [];
   var isJs:Bool;
-  var hasClassName:Bool = false;
-  var hasTagName:Bool = false;
-  var hasSelName:Bool = false;
-  var viewType = Context.getType('scout.Mountable');
 
-  public function new(fields:Array<Field>, isJs:Bool) {
+  public function new(c:ClassType, fields:Array<Field>, isJs:Bool) {
+    this.c = c;
     this.fields = fields;
     this.isJs = isJs;
   }
 
-  public function export():Array<Field> {
-    var fields = filterFieldsAndExtractAttrs();
-    var attrType = generateAttrType();
-    fields = generateConstructor(fields, attrType);
-    fields = generateGettersAndSetters(fields);
+  public function export() {
+    addElement();
+    addAttrsAndStates();
+    addImplFields();
     return fields;
   }
 
-  function filterFieldsAndExtractAttrs():Array<Field> {
-    return fields.filter(function (f) {
-      switch (f.kind) {
-        case FVar(t, e):
-          var metaNames = [ ':attr', ':attribute' ];
-          if (f.meta.hasMeta(metaNames)) {
-
-            var metas = f.meta.extractMeta(metaNames);
-            if (metas.length > 1) {
-              Context.error('A var may only have one :attr or :attribute metadata entry', f.pos);
-            }
-            var options = extractAttrOptions(metas[0]);
-            var isOptional:Bool = false;
-
-            if (f.name == 'className') {
-              hasClassName = true;
-              options.push(AttrRender('class'));
-            }
-            if (f.name == 'tag') hasTagName = true; 
-            if (f.name == 'sel') hasSelName = true;
-
-            addAttr(f.name, t, e, f.pos, isOptional, options);
-            return false;
+  // Todo: clean this up
+  function addElement() {
+    if (isJs) {
+      var metas = c.meta.get().extract(elMetaNames);
+      var sel:Expr = macro null;
+      var tag:Expr = macro el = js.Browser.document.createElement('div');
+      var className:Expr = macro null;
+      var attrs:Array<Expr> = [];
+      for (meta in metas) { 
+        for (e in meta.params) switch (e.expr) {
+          case EConst(CIdent(s)) | EConst(CString(s)): switch (s) {
+            case 'sel':
+              fields.push((macro class {
+                @:attr @:optional var sel:String;
+              }).fields[0]);
+              sel = macro if (sel != null) {
+                el = js.Browser.document.querySelector(sel);
+              };
+            case 'className' | 'class': 
+              fields.push((macro class {
+                @:attr @:optional var className:String;
+              }).fields[0]);
+              className = macro el.setAttribute('class', className);
+            case 'tag':
+              fields.push((macro class {
+                @:attr var tag:String = 'div';
+              }).fields[0]);
+              tag = macro el = js.Browser.document.createElement(tag);
+            default:
+              fields.push((macro class {
+                @:attr var $s:String;
+              }).fields[0]);
+              attrs.push(macro el.setAttribute($v{s}, $i{s}));
           }
-          return true;
-        case FFun(func):
-          var name = f.name;
-
-          if (f.meta.hasMeta([ ':js' ])) {
-            if (!isJs) {
-              return false;
+          case EBinop(OpAssign, e1, e2): switch (e1.expr) {
+            case EConst(CIdent(s)) | EConst(CString(s)): switch (s) {
+              case 'sel': sel = macro {
+                var __sel = ${e2};
+                if (__sel != null) {
+                  el = js.Browser.document.querySelector(__sel);
+                }
+              };
+              case 'tag': tag = macro el = js.Browser.document.createElement(${e2});
+              case 'className' | 'class': className = macro el.setAttribute('class', ${e2});
+              default: attrs.push(macro el.setAttribute($v{s}, ${e2}));
             }
+            default: Context.error('Invalid expression', e.pos);
           }
-
-          if (f.meta.hasMeta([ ':sys' ])) {
-            if (isJs) {
-              return false;
-            }
-          }
-
-          if (name == 'render') {
-            f.name = '__scout_render';
-            f.access.push(haxe.macro.Access.AOverride);
-          }
-
-          if (f.meta.hasMeta([ ':init' ])) {
-            initializers.push(macro this.$name() );
-          }
-
-          if (f.meta.hasMeta([ ':on' ])) {
-            if (!isJs) {
-              return false;
-            }
-            
-            var metas = f.meta.extractMeta([ ':on' ]);
-            for (meta in metas) {
-              var type = meta.params[0];
-              var target = meta.params[1];
-              if (target == null) target = macro null;
-              eventBindings.push(macro this.events.push({ 
-                selector: ${target},
-                action: ${type},
-                method: this.$name 
-              }));
-            }
-          }
-          
-          if (f.meta.hasMeta([ ':observe' ])) {
-            var metas = f.meta.extractMeta([ ':observe' ]);
-            for (meta in metas) {
-              var expr = meta.params[0];
-              f.meta.remove(meta);
-              initializers.push(macro @:pos(f.pos) scout.Signal.observe(${expr}, this.$name));
-            }
-          }
-
-          return true;
-        default: return true;
+          default: Context.error('Invalid expression', e.pos);
+        }
+        c.meta.remove(meta.name);
       }
-    });
+      fields = fields.concat((macro class {
+
+        function __scout_ensureEl() {
+          ${sel};
+          if (el == null) {
+            ${tag};
+            ${className};
+            $b{attrs};
+          }
+        }
+
+      }).fields);
+    } else {
+      var metas = c.meta.get().extract(elMetaNames);
+      var tag:Expr = macro var out = '<div';
+      var closingTag:Expr = macro out += '</div>';
+      var attrs:Array<Expr> = [];
+      for (meta in metas) { 
+        for (e in meta.params) switch (e.expr) {
+          case EConst(CIdent(s)) | EConst(CString(s)): switch (s) {
+            case 'tag':
+              fields.push((macro class {
+                @:attr var tag:String = 'div';
+              }).fields[0]);
+              tag = macro var out = '<' + tag;
+              closingTag = macro out += '</' + tag + '>';
+            case 'className' | 'class': 
+              fields.push((macro class {
+                @:attr @:optional var className:String;
+              }).fields[0]);
+              attrs.push(macro attrs.push('class="' + className + '"'));
+            default:
+              fields.push((macro class {
+                @:attr var $s:String;
+              }).fields[0]);
+              attrs.push(macro attrs.push( $v{s} + '="' + $i{s} + '"'));
+          }
+          case EBinop(OpAssign, e1, e2): switch (e1.expr) {
+            case EConst(CIdent(s)) | EConst(CString(s)): switch (s) {
+              case 'tag': 
+                tag = macro var out = '<' + ${e2};
+                closingTag = macro out += '</' + ${e2} + '>'; 
+              case 'className' | 'class': 
+                attrs.push(macro attrs.push('class="' + ${e2} + '"'));
+              default: 
+                attrs.push(macro attrs.push( $v{s} + '="' + ${e2} + '"'));
+            }
+            default: Context.error('Invalid expression', e.pos);
+          }
+          default: Context.error('Only assignments are allowed here', e.pos);
+        }
+        c.meta.remove(meta.name);
+      }
+      fields = fields.concat((macro class {
+
+        override function __scout_doRender() {
+          var attrs:Array<String> = [];
+          ${tag};
+          $b{attrs};
+          out += attrs.join(' ');
+          out += '>';
+          out += __scout_render();
+          ${closingTag};
+          content = out;
+        }
+
+      }).fields);
+    }
   }
 
-  private function generateAttrType() {
-    if (!hasClassName) {
-      addAttr('className', macro:String, null, Context.currentPos(), true, [ AttrRender('class') ]);
-    }
-    if (!hasTagName) {
-      addAttr('tag', macro:String, macro 'div', Context.currentPos(), true, []);
-    }
-    if (!hasSelName) {
-      addAttr('sel', macro:String, null, Context.currentPos(), true, []);
-    }
-    return TAnonymous(attrs);
-  }
+  function addImplFields() {
+    var conAttrArgType = TAnonymous(constructorFields);
+    var attrsType = TAnonymous(attrs);
 
-  private function generateConstructor(fields:Array<Field>, attrType:ComplexType):Array<Field> {
-    fields.push({
-      name: 'states',
-      access: [ APrivate ],
-      kind: FVar(TAnonymous(states), null),
-      pos: Context.currentPos()
-    });
+    fields = fields.concat((macro class {
+      final attrs:$attrsType;
+    }).fields);
 
     if (isJs) {
-      return fields.concat((macro class {
+      fields = fields.concat((macro class {
 
-        public function new(attrs:$attrType) {
-          this.states = cast {};
+        public function new(attrs:$conAttrArgType) {
+          this.attrs = cast {};
           $b{attrInitializers};
-          ensureElement();
+          __scout_ensureEl();
           $b{initializers};
           $b{eventBindings};
           this.delegateEvents(events);
         }
 
-        private function ensureElement() {
-          if (sel != null) {
-            el = js.Browser.document.querySelector(sel);
-          }
-          if (el == null) {
-            el = js.Browser.document.createElement(tag);
-            $b{ [ for (attr in renderableAttrs.keys()) {
-              var name = { expr:EConst(CString(renderableAttrs.get(attr))), pos: Context.currentPos() };
-              macro el.setAttribute(${name}, $i{attr});
-            } ] }
-          }
-        }
+      }).fields);
+    } else {
+      fields = fields.concat((macro class {
 
-        // todo: maybe override __scout_doRender to update the El as well?
+        public function new(attrs:$conAttrArgType) {
+          this.states = cast {};
+          this.attrs = cast {};
+          $b{attrInitializers};
+          $b{initializers};
+        }
 
       }).fields);
     }
-
-    return fields.concat((macro class {
-
-      public function new(attrs:$attrType) {
-        this.states = cast {};
-        $b{attrInitializers};
-        $b{initializers};
-      }
-
-      override function __scout_doRender() {
-        var options:Dynamic = {};
-        $b{ [ for (attr in renderableAttrs.keys()) {
-          var name = { expr:EConst(CString(renderableAttrs.get(attr))), pos: Context.currentPos() };
-          macro Reflect.setField(options, ${name}, $i{attr});
-        } ] }
-        content = new scout.Element(tag, options, [
-          scout.Template.safe(__scout_render())
-        ]).toRenderResult();
-      }
-
-    }).fields);
   }
 
-  function generateGettersAndSetters(fields:Array<Field>) {
-    for (attr in attrs) switch attr.kind {
-      case FVar(t, _):
-        fields.push(makeProp(attr.name, t, attr.pos));
-        fields.push(makeGetter(attr.name, t, attr.pos));
-        fields.push(makeSetter(attr.name, t, attr.pos)); 
-      default:
-    }
-    return fields;
-  }
-
-  private function makeProp(name:String, t:ComplexType, pos:Position):Field {
-    return {
-      name: name,
-      kind: FProp('get', 'set', t, null),
-      access: [ APublic ],
-      pos: pos
-    };
-  }
-
-  private function makeGetter(name:String, ret:ComplexType, pos:Position):Field {
-    return {
-      name: 'get_${name}',
-      kind: FFun({
-        ret: ret,
-        args: [],
-        expr: macro return this.states.$name.get()
-      }),
-      access: [ AInline, APublic ],
-      pos: pos
-    };
-  }
-
-  private function makeSetter(name:String, ret:ComplexType, pos:Position):Field {
-    return {
-      name: 'set_${name}',
-      kind: FFun({
-        ret: ret,
-        args: [ { name:'value', type:ret } ],
-        expr: macro {
-          this.states.$name.set(value);
-          return value;
+  function addAttrsAndStates() {
+    var newFields:Array<Field> = [];
+    fields = fields.filter(f -> switch (f.kind) {
+      case FVar(t, e):
+        if (f.meta.hasEntry(attrMetaNames)) {
+          newFields = newFields.concat(makeFieldsForAttr(f, t, e));
+          return false;
         }
-      }),
-      access: [ AInline, APublic ],
-      pos: pos
-    };
+        if (f.meta.hasEntry(stateMetaNames)) {
+          newFields = newFields.concat(makeFieldsForState(f, t, e));
+          return false;
+        }
+        return true;
+      case FFun(func):
+        if (f.meta == null) {
+          f.meta = [];
+        }
+
+        if (f.meta.hasEntry([ ':js' ]) && !isJs) {
+          return false;
+        }
+
+        if (f.meta.hasEntry([ ':sys' ]) && isJs) {
+          return false;
+        }
+
+        if (f.name == 'render') {
+          f.name = '__scout_render';
+          f.access.push(haxe.macro.Access.AOverride);
+          switch (func.expr.expr) {
+            case EConst(CString(s)):
+              var expr = func.expr;
+              func.expr = macro return scout.Template.html(${expr});
+              f.kind = FFun(func);
+            default:
+          }
+        }
+        
+        if (f.meta.hasEntry([ ':init' ])) {
+          var name = f.name;
+          initializers.push(macro this.$name());
+        }
+
+        if (f.meta.hasEntry([ ':on' ])) {
+          if (!isJs) {
+            return false;
+          }
+          var name = f.name;
+          var metas = f.meta.extract([ ':on' ]);
+          for (meta in metas) {
+            var type = meta.params[0];
+            var target = meta.params[1];
+            if (target == null) target = macro null;
+            eventBindings.push(macro this.events.push({ 
+              selector: ${target},
+              action: ${type},
+              method: this.$name 
+            }));
+          }
+        }
+        
+        if (f.meta.hasEntry(observeMetaNames)) {
+          var name = f.name;
+          var metas = f.meta.extract(observeMetaNames);
+          for (meta in metas) {
+            if (meta.params.length == 0) {
+              Context.error('An identifier is required', f.pos);
+            } else if (meta.params.length > 1) {
+              Context.error('Only one param is allowed here', f.pos);
+            }
+            initializers.push(Common.makeObserverForState('attrs', meta.params[0], macro this.$name));
+          }
+        }
+        true;
+      default: true;
+    });
+    fields = fields.concat(newFields);
   }
 
-  private function addAttr(name:String, t:ComplexType, ?e:Expr, pos:Position, isOptional:Bool = false, options:Array<AttrOptions>) {
-    attrs.push({
-      name: name,
-      kind: FVar(t, null),
-      access: [ APublic ],
-      meta: isOptional || e != null ? [ { name: ':optional', pos: pos } ] : [],
-      pos: pos
-    });
-
-    states.push({
-      name: name,
-      kind: FVar(macro:scout.Stateful<$t>, null),
-      access: [ APublic ],
-      meta: [],
-      pos: pos
-    });
-
-    for (option in options) switch (option) {
-      case AttrRender(s):
-        if (name == 'className' && s == null) s = 'class';
-        if (s == null) s = name;
-        renderableAttrs.set(name, s);
-      case AttrObserve(target):
-        if (target == null) target = 'render';
-        initializers.push(macro this.states.$name.subscribe(function (_) $i{target}()));
-      case AttrOptional:
-        isOptional = true;
-      default:
-    }
-
-    var type = t.toType();
-    var init = e != null ? macro attrs.$name != null ? attrs.$name : ${e} : macro attrs.$name;
+  function makeFieldsForAttr(f:Field, t:ComplexType, ?e:Expr):Array<Field> {
+    var isOptional = f.meta.hasEntry([ ':optional' ]) || e != null;
+    constructorFields.push(Common.makeConstructorField(f.name, t, f.pos, isOptional));
+    attrs.push(Common.makeValue(f.name, t, f.pos));
     
-    if (Context.unify(type, viewType)) {
-      // Note: child views are ALWAYS added last.
-      initializers.push(macro this.states.$name = new scout.Child(this, ${init}));
+    if (Context.unify(t.toType(), childType)) {
+      var name = f.name;
+      var init = e == null
+        ? macro attrs.$name
+        : macro attrs.$name == null ? ${e} : attrs.$name;
+      initializers.push(macro {
+        var __c = ${init};
+        __c.setParent(this);
+        this.attrs.$name = __c;
+      });
     } else {
-      attrInitializers.push(macro this.states.$name = new scout.State(${init}));
+      attrInitializers.push(Common.makeValueInitializer('attrs', 'attrs', f.name, t, e));
     }
+    return [
+      Common.makeProp(f.name, t, f.pos, false),
+      Common.makeValueGetter('attrs', f.name, t, f.pos)
+    ];
   }
 
-  private function extractAttrOptions(meta:MetadataEntry):Array<AttrOptions> {
-    return [ for (e in meta.params) {
-      switch (e.expr) {
-        case EConst(CIdent(s)):
-          switch (s) {
-            case 'tag': AttrRender(null);
-            case 'observe': AttrObserve(null);
-            case 'optional': AttrOptional;
-            default: Context.error('${s} is not a valid parameter for ${meta.name}', e.pos);
-          }
-        case EBinop(
-          OpAssign, 
-          { expr: EConst(CIdent(s)), pos:_ },
-          { expr: EConst(CString(target)), pos:_ }
-        ):
-          switch (s) {
-            case 'tag': AttrRender(target);
-            case 'observe': AttrObserve(target);
-            default: Context.error('${s} is not a valid parameter for ${meta.name}', e.pos);
-          }
-        case EBinop(
-          OpAssign, 
-          { expr: EConst(CIdent('observe')), pos:_ },
-          { expr: EConst(CIdent(target)), pos:_ }
-        ): AttrObserve(target);
-        default:
-          Context.error('Invalid expression for ${meta.name}', e.pos);
-      }
-    } ].filter(function (item) return item != null);
+  function makeFieldsForState(f:Field, t:ComplexType, ?e:Expr):Array<Field> {
+    var isOptional = f.meta.hasEntry([ ':optional' ]) || e != null;
+    attrs.push(Common.makeState(f.name, t, f.pos));
+    constructorFields.push(Common.makeConstructorField(f.name, t, f.pos, isOptional));
+    attrInitializers.push(Common.makeStateInitializer('attrs', 'attrs', f.name, t, e));
+    return [
+      Common.makeProp(f.name, t, f.pos, true),
+      Common.makeStateGetter('attrs', f.name, t, f.pos),
+      Common.makeStateSetter('attrs', f.name, t, f.pos)
+    ];
   }
 
-}
-
-private enum AttrOptions {
-  AttrOptional;
-  AttrRender(?alias:String);
-  AttrObserve(?target:String);
 }

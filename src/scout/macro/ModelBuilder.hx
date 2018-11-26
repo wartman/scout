@@ -6,9 +6,15 @@ import haxe.macro.Context;
 
 using Lambda;
 using haxe.macro.Tools;
-using scout.macro.MacroTools;
+using scout.macro.MetadataTools;
 
 class ModelBuilder {
+
+  static final propMetaNames = [ ':prop', ':property' ];
+  static final compMetaNames = [ ':comp', ':computed' ];
+  static final observeMetaNames = [ ':observe' ];
+  static final transitionMetaNames = [ ':transition' ];
+  static var processed:Array<ClassType> = [];
 
   public static function build() {
     return new ModelBuilder(
@@ -19,12 +25,10 @@ class ModelBuilder {
 
   var c:ClassType;
   var fields:Array<Field>;
-  var newFields:Array<Field> = [];
-  var props:Array<Field> = [];
+  var constructorFields:Array<Field> = [];
   var states:Array<Field> = [];
   var stateInitializers:Array<Expr> = [];
   var initializers:Array<Expr> = [];
-  var observableType = Context.getType('scout.Observable');
 
   public function new(c:ClassType, fields:Array<Field>) {
     this.c = c;
@@ -32,248 +36,159 @@ class ModelBuilder {
   }
 
   public function export():Array<Field> {
+    if (processed.has(c)) return fields;
+    processed.push(c);
     ensureId();
-    var out = filterFieldsAndExtractProps();
+    addProps();
     addImplFields();
-    return out.concat(newFields);
+    return fields;
   }
 
   function ensureId() {
     if (!fields.exists(function (f) return f.name == 'id')) {
       fields = fields.concat((macro class {
-        @:prop(auto) var id:Int;
+        static var __scout_ids:Int = 0;
+        @:prop var id:Int = __scout_ids += 1;
       }).fields);
     }
   }
 
-  function filterFieldsAndExtractProps():Array<Field> {
-    return fields.filter(function (f) {
+  function addProps() {
+    var newFields:Array<Field> = [];
+    fields = fields.filter(f -> {
+      if (f.meta == null) return true;
+
       switch (f.kind) {
         case FVar(t, e):
-          var propNames = [ ':prop', ':property' ];
-          if (f.meta.hasMeta(propNames)) {
-            var propIsOptional = f.meta.hasMeta([ ':optional' ]) || e != null;
-            var metas = f.meta.extractMeta(propNames);
-            if (metas.length > 1) {
-              Context.error('A var may only have one :prop or :property metadata entry', f.pos);
-            }
-            var options = extractPropOptions(metas[0]);
-
-            if (options.has(PropAuto)) {
-              propIsOptional = true;
-              if (!newFields.exists(function (f) return f.name == '__scout_ids')) {
-                newFields.push({
-                  name: '__scout_ids',
-                  access: [ APrivate, AStatic ],
-                  kind: FVar(macro:Int, macro 0),
-                  pos: Context.currentPos()
-                });
-              }
-              e = macro __scout_ids++;
-            }
-
-            if (options.has(PropOptional)) {
-              propIsOptional = true;
-            }
-            
-            props.push(makeRealProp(f.name, t, f.pos, propIsOptional));
-            newFields.push(makeProp(f.name, t, f.pos));
-            newFields.push(makeGetter(f.name, t, f.pos));
-            newFields.push(makeSetter(f.name, t, f.pos));
-
-            // var propName = f.name;
-            states.push(makeState(f.name, t, e, f.pos));
-
+          if (f.meta.hasEntry(propMetaNames)) {
+            newFields = newFields.concat(makeFieldsForProp(f, t, e));
             return false;
           }
-
-          if (f.meta.exists(function (entry) return entry.name == ':computed')) {
-            var watch = f.meta.find(function (entry) return entry.name == ':computed').params;
-            var fieldName = f.name;
-            var initializer = '__scout_init_${fieldName}';
-
-            props.push(makeRealProp(fieldName, t, f.pos, true));
-            newFields.push(makeProp(f.name, t, f.pos, false));
-            newFields.push(makeGetter(f.name, t, f.pos));
-            newFields.push({
-              name: initializer,
-              access: [ APrivate ],
-              kind: FFun({
-                ret: (macro:Void),
-                args: [],
-                expr: macro this.states.$fieldName.set(${e})
-              }),
-              pos: Context.currentPos()
-            });
-            states.push(makeState(f.name, t, null, f.pos));
-            initializers.push(macro this.$initializer());
-            watch.foreach(function (f) {
-              switch (f.expr) {
-                case EConst(c): switch (c) {
-                  case CString(s) | CIdent(s):
-                    initializers.push(macro this.states.$s.subscribe(function (_) {
-                      this.$initializer();
-                    }));
-                  default:
-                    throw new Error('Only strings or identifiers are allowed in :computed', f.pos);
-                }
-                default:
-                  throw new Error('Only strings or identifiers are allowed in :computed', f.pos);
-              }
-              return true;
-            });
-
+          if (f.meta.hasEntry(compMetaNames)) {
+            newFields = newFields.concat(makeFieldsForComputed(f, t, e));
             return false;
           }
-
           return true;
 
         case FFun(func):
-          var name = f.name;
-          
-          if (f.meta.exists(function (m) return m.name == ':observe')) {
-            var metas = f.meta.filter(function (m) return m.name == ':observe');
+          if (f.meta.hasEntry(observeMetaNames)) {
+            var name = f.name;
+            var metas = f.meta.extract(observeMetaNames);
             for (meta in metas) {
-              var expr = meta.params[0];
-              f.meta.remove(meta);
-              initializers.push(macro @:pos(f.pos) scout.Signal.observe(${expr}, this.$name));
+              if (meta.params.length == 0) {
+                Context.error('An identifier is required', f.pos);
+              } else if (meta.params.length > 1) {
+                Context.error('Only one param is allowed here', f.pos);
+              }
+              initializers.push(Common.makeObserverForState('props', meta.params[0], macro this.$name));
             }
           }
-          
-          if (f.meta.exists(function (m) return m.name == ':transition')) {
+          if (f.meta.hasEntry(transitionMetaNames)) {
             var expr = func.expr;
             func.expr = macro {
-              silent = true;
+              __scout_silent = true;
               ${expr};
-              silent = false;
+              __scout_silent = false;
               // todo: maybe track changes and only fire `onChange` if they
               // are greater than 0?
               onChange.dispatch(this);
-            };
+            }
           }
-
           return true;
-
+        
         default: return true;
       }
     });
+    fields = fields.concat(newFields);
   }
 
   function addImplFields() {
-    var propsType = TAnonymous(props);
+    var conArgType = TAnonymous(constructorFields);
     var statesType = TAnonymous(states);
     var localType = TPath({ pack: c.pack, name: c.name });
 
-    newFields = newFields.concat((macro class {
+    fields = fields.concat((macro class {
 
-      public var states(default, null):$statesType;
-      public var onChange(default, null):scout.Signal<$localType> = new scout.Signal();
-      var silent:Bool = false;
+      public final props:$statesType;
+      public final onChange:scout.Signal<$localType> = new scout.Signal();
+      var __scout_silent:Bool = false;
+      // var __scout_changes:Int = 0;
 
-      public function new(props:$propsType) {
-        this.states = cast {};
+      public function new(props:$conArgType) {
+        this.props = cast {};
         $b{stateInitializers};
+        __scout_init();
+      }
+
+      function __scout_init() {
         $b{initializers};
       }
 
-      public function subscribe(listener:scout.Model->Void):scout.Signal.SignalSlot<Model> {
+      public function observe(listener:scout.Model->Void):scout.Signal.SignalSlot<Model> {
         return cast this.onChange.add(listener);
       }
 
     }).fields);
   }
 
-  function makeProp(name:String, t:ComplexType, pos:Position, hasSetter:Bool = true):Field {
-    return {
-      name: name,
-      kind: FProp('get', hasSetter ? 'set' : 'never', t, null),
-      access: [ APublic ],
-      pos: pos
-    };
+  function makeFieldsForProp(f:Field, t:ComplexType, ?e:Expr):Array<Field> {
+    var metas = f.meta.extract(propMetaNames);
+    if (metas.length > 1) {
+      Context.error('A var may only have one :prop or :property metadata entry', f.pos);
+    }
+    var propIsOptional = f.meta.hasEntry([ ':optional' ]) || e != null;
+    
+    constructorFields.push(Common.makeConstructorField(f.name, t, f.pos, propIsOptional));
+    states.push(makeState(f.name, t, e, f.pos));
+    
+    return [
+      Common.makeProp(f.name, t, f.pos),
+      Common.makeStateGetter('props', f.name, t, f.pos),
+      Common.makeStateSetter('props', f.name, t, f.pos)
+    ];
   }
 
-  function makeRealProp(name:String, type:ComplexType, pos:Position, isOptional:Bool):Field {
-    return {
-      name: name,
-      kind: FVar(type, null),
-      access: [ APublic ],
-      meta: isOptional ? [ { name: ':optional', pos: pos } ] : [],
-      pos: pos
-    };
-  }
-
-  function makeGetter(name:String, ret:ComplexType, pos:Position):Field {
-    return {
-      name: 'get_${name}',
-      kind: FFun({
-        ret: ret,
-        args: [],
-        expr: macro return this.states.$name.get()
-      }),
-      meta: [ { name: ':keep', pos:Context.currentPos() } ],
-      access: [ AInline, APublic ],
-      pos: pos
-    };
-  }
-
-  function makeSetter(name:String, t:ComplexType, pos:Position):Field {
-    return {
-      name: 'set_${name}',
-      kind: FFun({
-        ret: t,
-        args: [ { name: 'value', type: t } ],
-        expr: macro {
-          this.states.$name.set(value);
-          return value;
-        }
-      }),
-      // meta: [ { name: ':keep', pos:Context.currentPos() } ],
-      access: [ APublic ],
-      pos: pos
-    };
+  function makeFieldsForComputed(f:Field, t:ComplexType, e:Expr):Array<Field> {
+    var metas = f.meta.extract(compMetaNames);
+    if (metas.length > 1) {
+      Context.error('A var may only have one :comp or :computed metadata entry', f.pos);
+    }
+    var watch = metas[0].params;
+    var name = f.name;
+    var initializer = '__scout_init_${f.name}';
+    
+    constructorFields.push(Common.makeConstructorField(f.name, t, f.pos, true));
+    var out = [
+      Common.makeProp(f.name, t, f.pos, false),
+      Common.makeStateGetter('props', f.name, t, f.pos)
+    ].concat((macro class {
+      function $initializer():Void {
+        this.props.$name.set(${e});
+      }
+    }).fields);
+    states.push(makeState(f.name, t, null, f.pos));
+    initializers.push(macro this.$initializer());
+    for (target in watch) switch (target.expr) {
+      case EConst(c): switch (c) {
+        case CString(s) | CIdent(s):
+          initializers.push(macro this.props.$s.observe(_ -> this.$initializer()));
+        default:
+          throw new Error('Only strings or identifiers are allowed in :computed', f.pos);
+      }
+      default:
+        throw new Error('Only strings or identifiers are allowed in :computed', f.pos);
+    }
+    return out;
   }
 
   function makeState(name:String, type:ComplexType, ?e:Expr, pos:Position):Field {
-    var obs = {
-      name: name,
-      kind: FVar(macro:scout.Stateful<$type>),
-      access: [ APublic ],
-      pos: pos
-    };
-    var init = e != null ? macro props.$name != null ? props.$name : ${e} : macro props.$name;
-    if (Context.unify(type.toType(), observableType)) {
-      stateInitializers.push(macro this.states.$name = new scout.ObservableState(${init}));
-    } else { 
-      stateInitializers.push(macro this.states.$name = new scout.State(${init}));
-    }
-
+    stateInitializers.push(Common.makeStateInitializer('props', 'props', name, type, e));
     initializers.push(macro {
-      this.states.$name.subscribe(function (_) {
-        if (!this.silent) this.onChange.dispatch(this);
+      this.props.$name.observe(function (_) {
+        if (!this.__scout_silent) this.onChange.dispatch(this);
       });
     });
-
-    return obs;
+    return Common.makeState(name, type, pos);
   }
 
-  function extractPropOptions(meta:MetadataEntry):Array<PropOptions> {
-    return [ for (e in meta.params) {
-      switch (e.expr) {
-        case EConst(CIdent(s)):
-          switch (s) {
-            case 'auto': PropAuto;
-            case 'optional': PropOptional;
-            default: Context.error('${s} is not a valid parameter for ${meta.name}', e.pos);
-          }
-        default:
-          Context.error('${meta.name} only accepts identifiers', e.pos);
-      }
-    } ].filter(function (item) return item != null);
-  }
-
-}
-
-enum PropOptions {
-  PropAuto;
-  PropOptional;
 }

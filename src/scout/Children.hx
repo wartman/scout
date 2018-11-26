@@ -2,10 +2,12 @@ package scout;
 
 using Lambda;
 
-private class ChildrenImpl<T:View> implements Mountable implements Renderable {
+class ChildrenImpl<T:Child> implements Renderable implements Child {
 
-  var parent:View;
+  var parent:Child;
   var children:Array<T> = [];
+  public var length(get, never):Int;
+  public function get_length() return children.length;
 
   public function new(?children:Array<T>) {
     if (children != null) {
@@ -13,7 +15,7 @@ private class ChildrenImpl<T:View> implements Mountable implements Renderable {
     }
   }
 
-  public function setParent(parent:View) {
+  public function setParent(parent:Child) {
     this.parent = parent;
     for (view in children) {
       view.setParent(this.parent);
@@ -29,24 +31,36 @@ private class ChildrenImpl<T:View> implements Mountable implements Renderable {
   public function add(view:T) {
     view.setParent(parent);
     children.push(view);
-    parent.render();
+    if (Std.is(parent, View)) {
+      var view:View = cast parent;
+      view.render();
+    }
   }
 
   public function prepend(view:T) {
     view.setParent(parent);
     children.unshift(view);
-    parent.render();
+    if (Std.is(parent, View)) {
+      var view:View = cast parent;
+      view.render();
+    }
   }
 
   public function remove(view:T) {
     var child = children.find(function (c) return c == view);
     if (child != null) {
       child.detachFromParent();
-      #if js
-        child.remove();
+      #if (js && !nodejs)
+        if (Std.is(child, View)) { 
+          var view:View = cast child;
+          view.remove();
+        }
       #end
       children.remove(child);
-      parent.render();
+      if (Std.is(parent, View)) {
+        var view:View = cast parent;
+        view.render();
+      }
     }
   }
 
@@ -75,12 +89,12 @@ private class ChildrenImpl<T:View> implements Mountable implements Renderable {
 }
 
 @:forward
-abstract Children<T:View>(ChildrenImpl<T>) to Mountable to Renderable {
+abstract Children<T:Child>(ChildrenImpl<T>) to Child to Renderable {
 
   public inline function new(?children:Array<T>) { 
     this = new ChildrenImpl(children);
   }
 
-  @:from public static inline function ofArray<T:View>(children:Array<T>) return new Children(children);
+  @:from public static inline function ofArray<T:Child>(children:Array<T>) return new Children(children);
 
 }

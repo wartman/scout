@@ -1,5 +1,6 @@
 package scout;
 
+import fixture.model.SimpleModel;
 import fixture.view.*;
 
 using hex.unittest.assertion.Assert;
@@ -18,6 +19,7 @@ class ViewTest {
   @Test
   public function testCustomElement() {
     var view = new CustomElementView({
+      className: 'foo',
       foo: 'foo'
     });
     view.render().content.equals('<span class="foo" id="${view.cid}" data-foo="foo" data-bar="bar"></span>');
@@ -105,6 +107,20 @@ class ViewTest {
     view.model = new fixture.model.SimpleModel({ name: 'bar', value: 'foo' });
     // Note that we don't render again!
     view.content.equals('<div>bar foo</div>');
+  }
+
+  @Test
+  public function testCollectionView() {
+    var collection:Collection<SimpleModel> = new Collection([
+      new SimpleModel({ name: 'foo', value: 'bar' })
+    ]);
+    var view = new WithCollectionView({ collection: collection });
+    var expected = '<div><div>foo bar</div></div>';
+    view.render().content.equals(expected);
+
+    collection.add(new SimpleModel({ name: 'bin', value: 'bax' }));
+    expected = '<div><div>foo bar</div><div>bin bax</div></div>';
+    view.content.equals(expected);
   }
 
 }

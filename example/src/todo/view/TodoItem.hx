@@ -5,14 +5,13 @@ import todo.model.Todo;
 import todo.model.Store;
 
 @:el(
-  sel = sel,
+  sel,
   tag = 'li',
   className = 'todo-item',
   id = id
 )
 class TodoItem extends View {
 
-  @:attr @:optional var sel:String;
   @:attr var id:String;
   @:attr var todo:Todo;
   @:attr var store:Store;

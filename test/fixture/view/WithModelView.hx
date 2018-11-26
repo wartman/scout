@@ -1,20 +1,16 @@
 package fixture.view;
 
 import scout.View;
-import scout.Template.html;
 import fixture.model.SimpleModel;
 
 class WithModelView extends View {
 
   @:attr var model:SimpleModel;
 
-  public function render() return html('${model.name}|${model.value}');
+  @:observe(model)
+  function update(_) render();
 
-  @:observe(model.states.name)
-  @:observe(model.states.value)
-  public function onNameChange(_) {
-    render();
-  }
-
+  public function render() 
+    '${model.name} ${model.value}'; 
 
 }

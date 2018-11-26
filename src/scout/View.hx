@@ -6,7 +6,7 @@ package scout;
   typedef ViewEvent = {
     selector:String,
     action:String,
-    method:js.html.Event -> Void
+    method:(e:js.html.Event) -> Void
   };
 #end
 
@@ -15,10 +15,16 @@ package scout;
 #else
   @:autoBuild(scout.macro.ViewBuilder.buildSys())
 #end
-class View implements Renderable implements Mountable {
+class View implements Renderable implements Child {
+  
+  static var __scout_ids:Int = 0;
 
-  static var autoIdIndex:Int = 0;
-
+  public final cid:String = '__scout_view_' + __scout_ids++;
+  public final beforeRender:Signal<View> = new Signal();
+  public final afterRender:Signal<View> = new Signal();
+  public final onReady:Signal<View> = new Signal();
+  public final onRemove:Signal<View> = new Signal();
+  var parent:Child;
   #if (js && !nodejs)
     @:isVar public var el(default, set):Element;
     public function set_el(el:Element) {
@@ -34,38 +40,20 @@ class View implements Renderable implements Mountable {
     public var content(get, set):String;
     public function get_content() return el.outerHTML;
     public function set_content(content:String) return el.innerHTML = content;
+    var parentListeners:Array<Signal.SignalSlot<View>> = [];
     var events:Array<ViewEvent> = [];
     var delegatedEvents:Array<Dom.EventBinding> = [];
   #else
     public var content:String;
   #end
 
-  public var isReady(get, never):Bool;
-  public inline function get_isReady():Bool {
-    #if (js && !nodejs)
-      return js.Browser.document.contains(el);
-    #else
-      return true;
-    #end
-  }
+  function __scout_render() return Template.html('');
 
-  public var cid(default, null):String = '__scout_view_' + autoIdIndex++;
-  public var beforeRender(default, null):Signal<View> = new Signal();
-  public var afterRender(default, null):Signal<View> = new Signal();
-  public var onReady(default, null):Signal<View> = new Signal();
-  public var onRemove(default, null):Signal<View> = new Signal();
-  var parent:View;
-  #if (js && !nodejs)
-    var parentListeners:Array<Signal.SignalSlot<View>> = [];
-  #end
-
-  public function __scout_render() return Template.html('');
-
-  public function __scout_doRender():Void {
+  function __scout_doRender():Void {
     content = __scout_render();
   }
 
-  public function shouldRender():Bool {
+  function shouldRender():Bool {
     return true;
   }
 
@@ -78,15 +66,18 @@ class View implements Renderable implements Mountable {
     return this;
   }
 
-  public function setParent(view:View) {
+  public function setParent(parent:Child) {
     detachFromParent();
-    parent = view;
+    this.parent = parent;
     #if (js && !nodejs)
-      parentListeners = [
-        parent.onRemove.add(function (_) remove()),
-        parent.beforeRender.add(function (_) detach()),
-        parent.afterRender.add(function (_) attach())
-      ];
+      if (Std.is(this.parent, View)) {
+        var view:View = cast this.parent; 
+        parentListeners = [
+          view.onRemove.add(function (_) remove()),
+          view.beforeRender.add(function (_) detach()),
+          view.afterRender.add(function (_) attach())
+        ];
+      }
     #end
   }
 
@@ -99,30 +90,33 @@ class View implements Renderable implements Mountable {
     parent = null;
   }
 
-  #if (js && !nodejs)
-
-    public function toRenderResult():RenderResult {
-      if (parent != null) {
-        // return new scout.Element(tag, { id: cid }, []).toRenderResult();
-        return Template.html('<div id="$cid"></div>');
-      }
+  public function toRenderResult():RenderResult {
+    #if (js && !nodejs)
+      return Template.html('<div id="$cid"></div>');
+    #else
       return render().content;
-    }
+    #end
+  }
 
-    public function attach() {
-      if (parent == null) return;
-      var target = parent.el.querySelector('#${cid}');
-      if (target != null) {
-        target.parentNode.replaceChild(render().el, target);
-      }
-    }
-
+  #if (js && !nodejs)
+  
     public function detach() {
       if (el.parentElement != null) {
         el.parentElement.removeChild(el);
       }
     }
-
+    
+    public function attach() {
+      if (parent == null) return;
+      if (Std.is(this.parent, View)) {
+        var view:View = cast this.parent; 
+        var target = view.el.querySelector('#${cid}');
+        if (target != null) {
+          target.parentNode.replaceChild(render().el, target);
+        }
+      }
+    }
+  
     public function remove() {
       onRemove.dispatch(this);
       undelegateEvents();
@@ -141,12 +135,6 @@ class View implements Renderable implements Mountable {
         binding.destroy();
       }
       delegatedEvents = [];
-    }
-
-  #else
-
-    public function toRenderResult():RenderResult {
-      return render().content;
     }
 
   #end

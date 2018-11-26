@@ -3,5 +3,5 @@ package scout;
 import scout.Signal;
 
 interface Observable<T> {
-  public function subscribe(cb:T->Void):SignalSlot<T>;
+  public function observe(cb:(value:T)->Void):SignalSlot<T>;
 }

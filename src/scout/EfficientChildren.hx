@@ -4,6 +4,10 @@ import scout.Children;
 
 using Lambda;
 
+// This needs some work to:
+//  a) Actually be efficient.
+//  b) Make sure that it won't needlessly update the DOM if, for example,
+//     the HTML has already been rendered server-side.
 class EfficientChildrenImpl<T:Child> extends ChildrenImpl<T> {
 
   override function add(view:T) {
@@ -15,7 +19,11 @@ class EfficientChildrenImpl<T:Child> extends ChildrenImpl<T> {
         if (Std.is(last, View) && Std.is(view, View)) {
           var lastView:View = cast last;
           var newView:View = cast view;
-          Dom.addAfter(lastView.el, newView.render().el);
+          if (!lastView.el.parentElement.contains(newView.el)) {
+            lastView.el.parentElement.appendChild(newView.render().el);
+          } else {
+            newView.render();
+          }
           return;
         }
       }
@@ -36,7 +44,11 @@ class EfficientChildrenImpl<T:Child> extends ChildrenImpl<T> {
         if (Std.is(first, View) && Std.is(view, View)) {
           var firstView:View = cast first;
           var newView:View = cast view;
-          Dom.addBefore(firstView.el, newView.render().el);
+          if (!firstView.el.parentElement.contains(newView.el)) {
+            firstView.el.parentElement.insertBefore(newView.render().el, firstView.el);
+          } else {
+            newView.render();
+          }
           return;
         }
       }

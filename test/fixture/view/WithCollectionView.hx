@@ -1,55 +1,34 @@
 package fixture.view;
 
 import scout.View;
-import scout.ModelCollection;
-import scout.Template.html;
-import scout.component.ListView;
+import scout.Children;
+import scout.Collection;
 import fixture.model.SimpleModel;
 
 class WithCollectionView extends View {
 
   private static var id:Int = 10;
   
-  @:attr var collection:ModelCollection<SimpleModel>;
-  @:attr var body:ListView<SimpleModelView> = new ListView({ className: 'children', items: [] });
-
-  @:init
-  public function initializeChildren() {
-    for (model in collection) {
-      addViewForModel(model);
-    }
-  }
+  @:attr var collection:Collection<SimpleModel>;
+  @:attr var body:Children<WithModelView> = new Children([ for (model in collection) makeView(model) ]);
 
   @:observe(collection.onAdd)
   public function addViewForModel(model:SimpleModel) {
-    body.add(new SimpleModelView({
-      model: model,
-      collection: this.collection
-    }));
+    body.add(makeView(model));
+  }
+
+  function makeView(model:SimpleModel) {
+    return new WithModelView({
+      model: model
+    });
   }
 
   @:observe(collection.onRemove)
   public function removeViewForModel(model:SimpleModel) {
-    for (view in body.items) {
-      if (view.model == model) {
-        body.delete(view);
-      }
-    }
+    var view = body.find(v -> v.model == model);
+    if (view != null) body.remove(view);
   }
 
-  @:on('click', '.add')
-  public function addModelOnClick(e:js.html.Event) {
-    collection.add(new SimpleModel({
-      id: id++,
-      name: 'added',
-      value: 'Added!'
-    }));
-  }
-
-  public function render() 
-    return html('
-      <button class="add">Add model</button>
-      <ul>${body}</ul>
-    ');
+  public function render() '${body}';
 
 }

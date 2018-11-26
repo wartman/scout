@@ -1,5 +1,5 @@
--cp refactor/src
--cp refactor/test
+-cp src
+-cp test
 -lib hexunit
 
 --each

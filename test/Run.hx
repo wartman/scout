@@ -9,13 +9,13 @@ class Run {
 
   public static function main() {
     var emu = new ExMachinaUnitCore();
-    #if travix
-		  emu.addListener(TravixNotifier());
-    // #elseif (js && !nodejs) 
-    //   emu.addListener(new BrowserUnitTestNotifier('Root'));
-    #else
+    // #if travix
+    //   emu.addListener(hex.unittest.notifier.TravixNotifier());
+    // // #elseif (js && !nodejs) 
+    // //   emu.addListener(new BrowserUnitTestNotifier('Root'));
+    // #else
       emu.addListener(new ConsoleNotifier(false));
-    #end
+    // #end
     emu.addListener(new ExitingNotifier());
     emu.addTest(ModelTest);
     emu.addTest(CollectionTest);

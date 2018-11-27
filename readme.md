@@ -1,6 +1,8 @@
 Scout
 =====
 
+[![Build Status](https://travis-ci.com/wartman/scout.svg?branch=master)](https://travis-ci.com/wartman/scout)
+
 Scout is a simple MVVC framework for Haxe that works something
 like Backbone. Its biggest benefit is that it's designed
 to work both on PHP and javascript using almost the

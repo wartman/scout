@@ -1,0 +1,10 @@
+build.hxml
+tests.hxml
+
+--each
+
+-js dst/test.js
+
+--next
+
+-php dst/test

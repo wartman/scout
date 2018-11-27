@@ -1,0 +1,4 @@
+build.hxml
+
+-cp example\src
+-js example\assets\app.js

@@ -133,7 +133,7 @@ class Common {
     };
   }
 
-  public static function makeStateInitializer(argName:String, propsName:String, name:String, type:ComplexType, ?e:Expr) {
+  public static function makeStateInitializer(argName:String, propsName:String, name:String, type:ComplexType, ?e:Expr, ?useChild:Bool = false) {
     var observableType = Context.getType('scout.Observable');
     var childType = Context.getType('scout.Child');
 
@@ -141,7 +141,7 @@ class Common {
       ? macro $p{[ argName, name ]} != null ? $p{[ argName, name ]} : ${e} 
       : macro $p{[ argName, name ]};
     
-    if (Context.unify(type.toType().follow(), childType)) {
+    if (useChild && Context.unify(type.toType().follow(), childType)) {
       return macro this.$propsName.$name = new scout.Property.PropertyOfChild(this, ${init});
     } else if (Context.unify(type.toType().follow(), observableType)) {
       return macro this.$propsName.$name = new scout.Property.PropertyOfObservable(${init});

@@ -202,7 +202,6 @@ class ViewBuilder {
       fields = fields.concat((macro class {
 
         public function new(attrs:$conAttrArgType) {
-          this.states = cast {};
           this.attrs = cast {};
           $b{attrInitializers};
           $b{initializers};
@@ -319,7 +318,7 @@ class ViewBuilder {
     var isOptional = f.meta.hasEntry([ ':optional' ]) || e != null;
     attrs.push(Common.makeState(f.name, t, f.pos));
     constructorFields.push(Common.makeConstructorField(f.name, t, f.pos, isOptional));
-    attrInitializers.push(Common.makeStateInitializer('attrs', 'attrs', f.name, t, e));
+    attrInitializers.push(Common.makeStateInitializer('attrs', 'attrs', f.name, t, e, true));
     return [
       Common.makeProp(f.name, t, f.pos, true),
       Common.makeStateGetter('attrs', f.name, t, f.pos),

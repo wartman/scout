@@ -142,4 +142,13 @@ class ModelTest {
     model.value.equals(null);
   }
 
+  @Test
+  public function testModelsUseTheCorrectPropertyWithViews() {
+    var model = new WithViewModel({
+      view: new fixture.view.SimpleView({ location: 'World', greeting: 'Hello' })
+    });
+    // Note: all we care about is if it compiles.
+    model.view.location.equals('World');
+  }
+
 }

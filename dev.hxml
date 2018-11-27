@@ -1,6 +1,8 @@
 build.hxml
 tests.hxml
 
+-lib travix
+
 --each
 
 -js dst/test.js

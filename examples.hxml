@@ -1,4 +1,5 @@
 build.hxml
 
+-main TodoApp
 -cp example\src
 -js example\assets\app.js

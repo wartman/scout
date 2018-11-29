@@ -2,13 +2,13 @@ package scout;
 
 using Lambda;
 
-class Collection<T:Model> implements Observable<Collection<T>> {
+class Collection<T:Model> implements Observable<T> {
 
   public var length(get, never):Int;
   public function get_length():Int return models.length;
   public var onAdd(default, never):Signal<T> = new Signal();
   public var onRemove(default, never):Signal<T> = new Signal();
-  public var onChange(default, never):Signal<Collection<T>> = new Signal();
+  public var onChange(default, never):Signal<T> = new Signal();
   var models:Array<T>;
   var modelListeners:Map<T, Signal.SignalSlot<Model>> = new Map();
 
@@ -16,16 +16,16 @@ class Collection<T:Model> implements Observable<Collection<T>> {
     models = init != null ? init : [];
   }
 
-  public function observe(cb:(collection:Collection<T>)->Void) {
+  public function observe(cb:(model:T)->Void) {
     return onChange.add(cb);
   }
 
   public function add(model:T) {
     if (!models.has(model)) {
       models.push(model);
-      modelListeners.set(model, model.observe(function (_) onChange.dispatch(this)));
+      modelListeners.set(model, model.observe(_ -> onChange.dispatch(model)));
       onAdd.dispatch(model);
-      onChange.dispatch(this);
+      onChange.dispatch(model);
     }
     return this;
   }
@@ -83,7 +83,7 @@ class Collection<T:Model> implements Observable<Collection<T>> {
     if (models.exists(function (m) return m.id == model.id)) {
       models = models.filter(function (m) return m.id != model.id);
       onRemove.dispatch(model);
-      onChange.dispatch(this);
+      onChange.dispatch(model);
     }
     return this;
   }

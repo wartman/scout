@@ -85,4 +85,18 @@ class CollectionTest {
     changed.equals(4);
   }
 
+  @Test
+  public function observesModels() {
+    var model =  SimpleModel({
+      id:1,
+      name: 'foo',
+      value: 'bar'
+    });
+    var collection:Collection<SimpleModel> = new Collection([ model ]);
+    var observed:String = '';
+    collection.observe(model -> observed += model.name);
+    model.value = 'bin';
+    observed.equals('foo');
+  }
+
 }

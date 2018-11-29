@@ -13,7 +13,8 @@ class Collection<T:Model> implements Observable<T> {
   var modelListeners:Map<T, Signal.SignalSlot<Model>> = new Map();
 
   public function new(?init:Array<T>) {
-    models = init != null ? init : [];
+    models = [];
+    if (init != null) for (model in init) registerModel(model);
   }
 
   public function observe(cb:(model:T)->Void) {
@@ -22,12 +23,17 @@ class Collection<T:Model> implements Observable<T> {
 
   public function add(model:T) {
     if (!models.has(model)) {
-      models.push(model);
-      modelListeners.set(model, model.observe(_ -> onChange.dispatch(model)));
+      registerModel(model);
       onAdd.dispatch(model);
       onChange.dispatch(model);
     }
     return this;
+  }
+
+  function registerModel(model:T) {
+    models.push(model);
+    var listener = model.observe(_ -> onChange.dispatch(model));
+    modelListeners.set(model, listener);
   }
 
   public inline function indexOf(model:T):Int {
@@ -35,7 +41,7 @@ class Collection<T:Model> implements Observable<T> {
   }
 
   public inline function filter(f:(model:T)->Bool):Array<T> {
-    return this.models.filter(f);
+    return models.filter(f);
   }
 
   public inline function exists(model:T):Bool {

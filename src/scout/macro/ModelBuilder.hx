@@ -125,7 +125,7 @@ class ModelBuilder {
       }
 
       public function observe(listener:scout.Model->Void):scout.Signal.SignalSlot<Model> {
-        return cast this.onChange.add(listener);
+        return cast this.onChange.add(cast listener);
       }
 
     }).fields);

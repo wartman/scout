@@ -447,7 +447,15 @@ var scout_Collection = function(init) {
 	this.onChange = { slots : []};
 	this.onRemove = { slots : []};
 	this.onAdd = { slots : []};
-	this.models = init != null ? init : [];
+	this.models = [];
+	if(init != null) {
+		var _g = 0;
+		while(_g < init.length) {
+			var model = init[_g];
+			++_g;
+			this.registerModel(model);
+		}
+	}
 };
 scout_Collection.__name__ = true;
 scout_Collection.__interfaces__ = [scout_Observable];
@@ -459,19 +467,21 @@ scout_Collection.prototype = {
 		return scout__$Signal_Signal_$Impl_$.add(this.onChange,cb);
 	}
 	,add: function(model) {
-		var _gthis = this;
 		if(!Lambda.has(this.models,model)) {
-			this.models.push(model);
-			var this1 = this.modelListeners;
-			var value = model.observe(function(_) {
-				scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,model);
-				return;
-			});
-			this1.set(model,value);
+			this.registerModel(model);
 			scout__$Signal_Signal_$Impl_$.dispatch(this.onAdd,model);
 			scout__$Signal_Signal_$Impl_$.dispatch(this.onChange,model);
 		}
 		return this;
+	}
+	,registerModel: function(model) {
+		var _gthis = this;
+		this.models.push(model);
+		var listener = model.observe(function(_) {
+			scout__$Signal_Signal_$Impl_$.dispatch(_gthis.onChange,model);
+			return;
+		});
+		this.modelListeners.set(model,listener);
 	}
 	,indexOf: function(model) {
 		return this.models.indexOf(model);

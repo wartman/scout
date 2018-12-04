@@ -87,7 +87,7 @@ class CollectionTest {
 
   @Test
   public function observesModels() {
-    var model =  SimpleModel({
+    var model = new SimpleModel({
       id:1,
       name: 'foo',
       value: 'bar'

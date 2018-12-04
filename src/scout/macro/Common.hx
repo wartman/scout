@@ -10,9 +10,9 @@ class Common {
   public static function makeObserverForState(propsName:String, prop:Expr, target:Expr) {
     return switch (prop.expr) {
       case EConst(CIdent(name)):
-        macro @:pos(prop.pos) scout.Signal.observe(this.$propsName.$name, ${target});
+        macro @:pos(prop.pos) this.$propsName.$name.observe(${target});
       default:
-        macro @:pos(prop.pos) scout.Signal.observe(${prop}, ${target}); 
+        macro @:pos(prop.pos) ${prop}.observe(${target}); 
     }
   }
 

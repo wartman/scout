@@ -14,6 +14,7 @@ class ModelBuilder {
   static final compMetaNames = [ ':comp', ':computed' ];
   static final observeMetaNames = [ ':observe' ];
   static final transitionMetaNames = [ ':transition' ];
+  static final initMetaNames = [ ':init' ];
   static var processed:Array<ClassType> = [];
 
   public static function build() {
@@ -93,6 +94,10 @@ class ModelBuilder {
               // are greater than 0?
               onChange.dispatch(this);
             }
+          }
+          if (f.meta.hasEntry(initMetaNames)) {
+            var name = f.name;
+            initializers.push(macro $i{name}());
           }
           return true;
         

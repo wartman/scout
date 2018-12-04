@@ -1,55 +1,57 @@
 package scout;
 
-@:forward
-abstract SignalSlot<T>({ listener:(value:T)->Void, signal:Signal<T>, once:Bool }) {
+typedef SignalListener<T> = (value:T)->Void;
 
-  public inline function new(listener:(value:T)->Void, signal:Signal<T>, once:Bool = false) {
-    this = {
-      listener: listener,
-      signal: signal,
-      once: once
-    };
+class SignalSlot<T> {
+
+  public final listener:SignalListener<T>;
+  public final once:Bool;
+  final signal:Signal<T>;
+
+  public function new(
+    listener:SignalListener<T>,
+    signal:Signal<T>,
+    once:Bool = false
+  ) {
+    this.listener = listener;
+    this.signal = signal;
+    this.once = once;
   }
 
   public inline function remove() {
-    this.signal.remove(this.listener);
+    this.signal.remove(listener);
   }
 
 }
 
-abstract Signal<T>({ slots: Array<SignalSlot<T>> }) {
+class Signal<T> implements Observable<T> {
 
-  public static inline function observe<T>(obs:Observable<T>, cb:(value:T)->Void) {
-    obs.observe(cb);
-  }
+  var slots:Array<SignalSlot<T>> = [];
 
-  @:to public function toObservable():Observable<T> {
-    return cast {
-      observe: (cb:(value:T)->Void) -> add(cb) 
-    };
-  }
+  public function new() {}
 
-  public inline function new() {
-    this = { slots: [] };
-  }
-
-  public function add(listener:(value:T)->Void, once:Bool = false):SignalSlot<T> {
-    var slot = new SignalSlot(listener, cast this, once);
-    this.slots.push(slot);
+  public function add(
+    listener:SignalListener<T>,
+    once:Bool = false
+  ):SignalSlot<T> {
+    var slot = new SignalSlot(listener, this, once);
+    slots.push(slot);
     return slot;
   }
 
-  public inline function once(listener:(value:T)->Void):SignalSlot<T> {
+  public inline function observe(listener:SignalListener<T>)
+    return add(listener, false);
+
+  public inline function once(listener:SignalListener<T>)
     return add(listener, true);
+
+  public function remove(listener:SignalListener<T>) {
+    slots = slots.filter(slot -> slot.listener != listener);
   }
 
-  public inline function remove(listener:(value:T)->Void) {
-    this.slots = this.slots.filter(slot -> slot.listener != listener);
-  }
-
-  public function dispatch(data:T) {
-    for (slot in this.slots) {
-      slot.listener(data);
+  public function dispatch(payload:T) {
+    for (slot in slots) {
+      slot.listener(payload);
       if (slot.once) slot.remove();
     }
   }

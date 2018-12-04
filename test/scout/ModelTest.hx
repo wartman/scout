@@ -18,6 +18,12 @@ class ModelTest {
   }
 
   @Test
+  public function testInit() {
+    var model = new WithInitModel({});
+    model.foo.equals('foo');
+  }
+
+  @Test
   public function testSignalsWithObserve() {
     var simple = new SimpleModel({
       id: 1,

@@ -240,13 +240,6 @@ class ViewBuilder {
         if (f.name == 'render') {
           f.name = '__scout_render';
           f.access.push(haxe.macro.Access.AOverride);
-          switch (func.expr.expr) {
-            case EConst(CString(s)):
-              var expr = func.expr;
-              func.expr = macro return scout.Template.html(${expr});
-              f.kind = FFun(func);
-            default:
-          }
         }
         
         if (f.meta.hasEntry([ ':init' ])) {
@@ -284,6 +277,15 @@ class ViewBuilder {
             initializers.push(Common.makeObserverForState('attrs', meta.params[0], macro this.$name));
           }
         }
+
+        switch (func.expr.expr) {
+          case EConst(CString(s)):
+            var expr = func.expr;
+            func.expr = macro return scout.Template.html(${expr});
+            f.kind = FFun(func);
+          default:
+        }
+
         true;
       default: true;
     });

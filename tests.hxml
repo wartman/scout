@@ -1,6 +1,4 @@
 build.hxml
-
 -cp test
--lib travix
 -lib hexunit
 -main Run

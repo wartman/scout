@@ -1,5 +1,4 @@
-build.hxml
-
+-lib scout
 -main TodoApp
 -cp example\src
 -js example\assets\app.js

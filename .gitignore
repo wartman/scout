@@ -1,4 +1,5 @@
 .DS_Store
 /dst/
+/bin/
 /example/assets/app.js/
 /example/lib/

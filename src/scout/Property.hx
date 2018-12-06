@@ -36,9 +36,7 @@ class PropertyOfObservable<T:Observable<M>, M> implements State<T> {
   public function new(?value:T) {
     if (value != null) {
       this.value = value;
-      lastSlot = value.observe(function (_) {
-        this.signal.dispatch(value);
-      });
+      lastSlot = value.observe(_ -> signal.dispatch(value));
     }
   }
 
@@ -51,15 +49,13 @@ class PropertyOfObservable<T:Observable<M>, M> implements State<T> {
       lastSlot.remove();
     }
     if (value != null) {
-      lastSlot = value.observe(function (_) {
-        this.signal.dispatch(value);
-      });
+      lastSlot = value.observe(_ -> signal.dispatch(value));
     }
     signal.dispatch(value);
   }
 
   public function get():T {
-    return this.value;
+    return value;
   }
 
   public function observe(cb:(value:T)->Void) {

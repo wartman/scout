@@ -17,6 +17,14 @@ class ViewTest {
   }
 
   @Test
+  public function testStringsAreConverted() {
+    var view = new ChecksTemplateStringView({
+      foo: 'foo'
+    });
+    view.render().content.equals('<div>bar bin foo</div>');
+  }
+
+  @Test
   public function testCustomElement() {
     var view = new CustomElementView({
       className: 'foo',

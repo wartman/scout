@@ -4,11 +4,11 @@ using Lambda;
 
 class Collection<T:Model> implements Observable<T> {
 
+  public final onAdd:Signal<T> = new Signal();
+  public final onRemove:Signal<T> = new Signal();
+  public final onChange:Signal<T> = new Signal();
   public var length(get, never):Int;
   public function get_length():Int return models.length;
-  public var onAdd(default, never):Signal<T> = new Signal();
-  public var onRemove(default, never):Signal<T> = new Signal();
-  public var onChange(default, never):Signal<T> = new Signal();
   var models:Array<T>;
   var modelListeners:Map<T, Signal.SignalSlot<Model>> = new Map();
 

@@ -11,8 +11,8 @@ class Run {
     var emu = new ExMachinaUnitCore();
     #if travix
       emu.addListener(new TravixNotifier());
-    // // #elseif (js && !nodejs) 
-    // //   emu.addListener(new BrowserUnitTestNotifier('Root'));
+    #elseif (js && !nodejs) 
+      emu.addListener(new BrowserUnitTestNotifier('Root'));
     #else
       emu.addListener(new ConsoleNotifier(false));
     #end

@@ -711,6 +711,7 @@ var scout_PropertyOfObservable = function(value) {
 		this.value = value;
 		this.lastSlot = value.observe(function(_) {
 			_gthis.signal.dispatch(value);
+			return;
 		});
 	}
 };
@@ -730,6 +731,7 @@ scout_PropertyOfObservable.prototype = {
 		if(value != null) {
 			this.lastSlot = value.observe(function(_) {
 				_gthis.signal.dispatch(value);
+				return;
 			});
 		}
 		this.signal.dispatch(value);

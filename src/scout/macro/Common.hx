@@ -142,12 +142,10 @@ class Common {
       : macro $p{[ argName, name ]};
     
     if (useChild && Context.unify(type.toType().follow(), childType)) {
-      return macro this.$propsName.$name = new scout.Property.PropertyOfChild(this, ${init});
-    } else if (Context.unify(type.toType().follow(), observableType)) {
-      return macro this.$propsName.$name = new scout.Property.PropertyOfObservable(${init});
-    } 
+      return macro this.$propsName.$name = scout.State.ofChild(this, ${init});
+    }
     
-    return macro this.$propsName.$name = new scout.Property(${init});
+    return macro this.$propsName.$name = ${init};
   }
 
   public static function makeValueInitializer(argName:String, propsName:String, name:String, type:ComplexType, ?e:Expr) {

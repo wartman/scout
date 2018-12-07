@@ -147,6 +147,22 @@ class ModelTest {
     });
     model.value.equals(null);
   }
+  
+  @Test
+  public function testChangesWithObservableChild() {
+    var model = new WithCollectionModel({
+      collection: new scout.Collection([
+        new SimpleModel({ name: 'foo', value: 'bar' })
+      ])
+    });
+    var changed = 0;
+    var testModel = new SimpleModel({ name: 'bin', value: 'bax' });
+    model.observe(_ -> changed++);
+    model.collection.add(testModel);
+    changed.equals(1);
+    model.collection.remove(testModel);
+    changed.equals(2);
+  }
 
   @Test
   public function testModelsUseTheCorrectPropertyWithViews() {

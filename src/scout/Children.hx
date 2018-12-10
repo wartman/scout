@@ -80,8 +80,8 @@ class ChildrenImpl<T:Child> implements Renderable implements Child {
     return children.map(cb);
   }
 
-  public function iterator():Array<T> {
-    return children;
+  public function iterator():Iterator<T> {
+    return children.iterator();
   }
 
   public function toRenderResult() return Template.html('${children}');

@@ -418,7 +418,7 @@ scout_ChildrenImpl.prototype = {
 		return this.children.map(cb);
 	}
 	,iterator: function() {
-		return this.children;
+		return HxOverrides.iter(this.children);
 	}
 	,toRenderResult: function() {
 		return scout__$RenderResult_RenderResult_$Impl_$._new("" + this.children.map(function(r) {
@@ -676,104 +676,6 @@ scout_Model.__interfaces__ = [scout_Observable];
 scout_Model.prototype = {
 	__class__: scout_Model
 };
-var scout_State = function() { };
-scout_State.__name__ = true;
-scout_State.__interfaces__ = [scout_Observable];
-scout_State.prototype = {
-	__class__: scout_State
-};
-var scout_Property = function(value) {
-	this.signal = new scout_Signal();
-	this.value = value;
-};
-scout_Property.__name__ = true;
-scout_Property.__interfaces__ = [scout_State];
-scout_Property.prototype = {
-	set: function(value) {
-		if(this.value == value) {
-			return;
-		}
-		this.value = value;
-		this.signal.dispatch(this.value);
-	}
-	,get: function() {
-		return this.value;
-	}
-	,observe: function(cb) {
-		return this.signal.add(cb);
-	}
-	,__class__: scout_Property
-};
-var scout_PropertyOfObservable = function(value) {
-	this.signal = new scout_Signal();
-	var _gthis = this;
-	if(value != null) {
-		this.value = value;
-		this.lastSlot = value.observe(function(_) {
-			_gthis.signal.dispatch(value);
-			return;
-		});
-	}
-};
-scout_PropertyOfObservable.__name__ = true;
-scout_PropertyOfObservable.__interfaces__ = [scout_State];
-scout_PropertyOfObservable.prototype = {
-	set: function(value) {
-		var _gthis = this;
-		if(this.value == value) {
-			return;
-		}
-		this.value = value;
-		if(this.lastSlot != null) {
-			var _this = this.lastSlot;
-			_this.signal.remove(_this.listener);
-		}
-		if(value != null) {
-			this.lastSlot = value.observe(function(_) {
-				_gthis.signal.dispatch(value);
-				return;
-			});
-		}
-		this.signal.dispatch(value);
-	}
-	,get: function() {
-		return this.value;
-	}
-	,observe: function(cb) {
-		return this.signal.add(cb);
-	}
-	,__class__: scout_PropertyOfObservable
-};
-var scout_PropertyOfChild = function(parent,target) {
-	this.signal = new scout_Signal();
-	this.parent = parent;
-	if(target != null) {
-		this.target = target;
-		target.setParent(this.parent);
-	}
-};
-scout_PropertyOfChild.__name__ = true;
-scout_PropertyOfChild.__interfaces__ = [scout_State];
-scout_PropertyOfChild.prototype = {
-	set: function(target) {
-		if(this.target == target) {
-			return;
-		}
-		if(this.target != null) {
-			this.target.detachFromParent();
-		}
-		this.target = target;
-		this.target.setParent(this.parent);
-		this.signal.dispatch(this.target);
-	}
-	,get: function() {
-		return this.target;
-	}
-	,observe: function(cb) {
-		return this.signal.add(cb);
-	}
-	,__class__: scout_PropertyOfChild
-};
 var scout__$RenderResult_RenderResult_$Impl_$ = {};
 scout__$RenderResult_RenderResult_$Impl_$.__name__ = true;
 scout__$RenderResult_RenderResult_$Impl_$._new = function(str) {
@@ -836,6 +738,119 @@ scout_Signal.prototype = {
 		}
 	}
 	,__class__: scout_Signal
+};
+var scout_StateObject = function() { };
+scout_StateObject.__name__ = true;
+scout_StateObject.__interfaces__ = [scout_Observable];
+scout_StateObject.prototype = {
+	__class__: scout_StateObject
+};
+var scout__$State_State_$Impl_$ = {};
+scout__$State_State_$Impl_$.__name__ = true;
+scout__$State_State_$Impl_$.ofObservable = function(value) {
+	return new scout__$State_StateOfObservable(value);
+};
+scout__$State_State_$Impl_$.ofDynamic = function(value) {
+	return scout__$State_State_$Impl_$._new(value);
+};
+scout__$State_State_$Impl_$.ofChild = function(parent,child) {
+	return new scout__$State_StateOfChild(parent,child);
+};
+scout__$State_State_$Impl_$._new = function(value) {
+	var this1 = new scout__$State_SimpleState(value);
+	return this1;
+};
+var scout__$State_SimpleState = function(value) {
+	this.signal = new scout_Signal();
+	this.value = value;
+};
+scout__$State_SimpleState.__name__ = true;
+scout__$State_SimpleState.__interfaces__ = [scout_StateObject];
+scout__$State_SimpleState.prototype = {
+	set: function(value) {
+		if(this.value == value) {
+			return;
+		}
+		this.value = value;
+		this.signal.dispatch(this.value);
+	}
+	,get: function() {
+		return this.value;
+	}
+	,observe: function(cb) {
+		return this.signal.add(cb);
+	}
+	,__class__: scout__$State_SimpleState
+};
+var scout__$State_StateOfObservable = function(value) {
+	this.signal = new scout_Signal();
+	var _gthis = this;
+	if(value != null) {
+		this.value = value;
+		this.lastSlot = value.observe(function(_) {
+			_gthis.signal.dispatch(value);
+			return;
+		});
+	}
+};
+scout__$State_StateOfObservable.__name__ = true;
+scout__$State_StateOfObservable.__interfaces__ = [scout_StateObject];
+scout__$State_StateOfObservable.prototype = {
+	set: function(value) {
+		var _gthis = this;
+		if(this.value == value) {
+			return;
+		}
+		this.value = value;
+		if(this.lastSlot != null) {
+			var _this = this.lastSlot;
+			_this.signal.remove(_this.listener);
+		}
+		if(value != null) {
+			this.lastSlot = value.observe(function(_) {
+				_gthis.signal.dispatch(value);
+				return;
+			});
+		}
+		this.signal.dispatch(value);
+	}
+	,get: function() {
+		return this.value;
+	}
+	,observe: function(cb) {
+		return this.signal.add(cb);
+	}
+	,__class__: scout__$State_StateOfObservable
+};
+var scout__$State_StateOfChild = function(parent,target) {
+	this.signal = new scout_Signal();
+	this.parent = parent;
+	if(target != null) {
+		this.target = target;
+		target.setParent(this.parent);
+	}
+};
+scout__$State_StateOfChild.__name__ = true;
+scout__$State_StateOfChild.__interfaces__ = [scout_StateObject];
+scout__$State_StateOfChild.prototype = {
+	set: function(target) {
+		if(this.target == target) {
+			return;
+		}
+		if(this.target != null) {
+			this.target.detachFromParent();
+		}
+		this.target = target;
+		this.target.setParent(this.parent);
+		this.signal.dispatch(this.target);
+	}
+	,get: function() {
+		return this.target;
+	}
+	,observe: function(cb) {
+		return this.signal.add(cb);
+	}
+	,__class__: scout__$State_StateOfChild
 };
 var scout__$Template_SafeContent = function(content) {
 	this.content = content;
@@ -981,19 +996,19 @@ var todo_model_Store = function(props) {
 	this.__scout_silent = false;
 	this.onChange = new scout_Signal();
 	this.props = { };
-	this.props.todos = new scout_PropertyOfObservable(props.todos);
-	this.props.editing = new scout_PropertyOfObservable(props.editing);
-	this.props.visible = new scout_Property(props.visible != null ? props.visible : todo_model_VisibleTodos.VisibleAll);
-	this.props.todosRemaining = new scout_Property(props.todosRemaining);
-	var tmp;
+	this.props.todos = scout__$State_State_$Impl_$.ofObservable(props.todos);
+	this.props.editing = scout__$State_State_$Impl_$.ofObservable(props.editing);
+	var tmp = props.visible != null ? scout__$State_State_$Impl_$.ofDynamic(props.visible) : scout__$State_State_$Impl_$.ofDynamic(todo_model_VisibleTodos.VisibleAll);
+	this.props.visible = tmp;
+	this.props.todosRemaining = scout__$State_State_$Impl_$.ofDynamic(props.todosRemaining);
+	var tmp1;
 	if(props.id != null) {
-		tmp = props.id;
+		tmp1 = scout__$State_State_$Impl_$.ofDynamic(props.id);
 	} else {
-		var tmp1 = todo_model_Store;
-		tmp1.__scout_ids += 1;
-		tmp = tmp1.__scout_ids;
+		var tmp2 = todo_model_Store;
+		tmp1 = scout__$State_State_$Impl_$.ofDynamic(tmp2.__scout_ids += 1);
 	}
-	this.props.id = new scout_Property(tmp);
+	this.props.id = tmp1;
 	this.__scout_init();
 };
 todo_model_Store.__name__ = true;
@@ -1077,18 +1092,19 @@ var todo_model_Todo = function(props) {
 	this.__scout_silent = false;
 	this.onChange = new scout_Signal();
 	this.props = { };
-	this.props.label = new scout_Property(props.label);
-	this.props.completed = new scout_Property(props.completed != null && props.completed);
-	this.props.editing = new scout_Property(props.editing != null && props.editing);
-	var tmp;
+	this.props.label = scout__$State_State_$Impl_$.ofDynamic(props.label);
+	var tmp = props.completed != null ? scout__$State_State_$Impl_$.ofDynamic(props.completed) : scout__$State_State_$Impl_$.ofDynamic(false);
+	this.props.completed = tmp;
+	var tmp1 = props.editing != null ? scout__$State_State_$Impl_$.ofDynamic(props.editing) : scout__$State_State_$Impl_$.ofDynamic(false);
+	this.props.editing = tmp1;
+	var tmp2;
 	if(props.id != null) {
-		tmp = props.id;
+		tmp2 = scout__$State_State_$Impl_$.ofDynamic(props.id);
 	} else {
-		var tmp1 = todo_model_Todo;
-		tmp1.__scout_ids += 1;
-		tmp = tmp1.__scout_ids;
+		var tmp3 = todo_model_Todo;
+		tmp2 = scout__$State_State_$Impl_$.ofDynamic(tmp3.__scout_ids += 1);
 	}
-	this.props.id = new scout_Property(tmp);
+	this.props.id = tmp2;
 	this.__scout_init();
 };
 todo_model_Todo.__name__ = true;
@@ -1164,6 +1180,7 @@ var todo_view_App = function(attrs) {
 	var __c1 = attrs.list == null ? new todo_view_TodoList({ store : this.get_store()}) : attrs.list;
 	__c1.setParent(this);
 	this.attrs.list = __c1;
+	this.__scout_init();
 	this.delegateEvents(this.events);
 };
 todo_view_App.__name__ = true;
@@ -1199,6 +1216,8 @@ todo_view_App.prototype = $extend(scout_View.prototype,{
 	,get_sel: function() {
 		return this.attrs.sel;
 	}
+	,__scout_init: function() {
+	}
 	,__class__: todo_view_App
 });
 var todo_view_Header = function(attrs) {
@@ -1207,6 +1226,7 @@ var todo_view_Header = function(attrs) {
 	this.attrs.title = attrs.title;
 	this.attrs.store = attrs.store;
 	this.__scout_ensureEl();
+	this.__scout_init();
 	this.events.push({ selector : ".new-todo", action : "keydown", method : $bind(this,this.handleSubmit)});
 	this.delegateEvents(this.events);
 };
@@ -1236,6 +1256,8 @@ todo_view_Header.prototype = $extend(scout_View.prototype,{
 	,get_store: function() {
 		return this.attrs.store;
 	}
+	,__scout_init: function() {
+	}
 	,__class__: todo_view_Header
 });
 var todo_view_TodoItem = function(attrs) {
@@ -1246,10 +1268,7 @@ var todo_view_TodoItem = function(attrs) {
 	this.attrs.store = attrs.store;
 	this.attrs.sel = attrs.sel;
 	this.__scout_ensureEl();
-	this.initializeVisibility();
-	this.get_todo().props.editing.observe($bind(this,this.toggleEditMode));
-	this.get_store().props.visible.observe($bind(this,this.isVisible));
-	this.get_todo().props.completed.observe($bind(this,this.isVisible));
+	this.__scout_init();
 	this.events.push({ selector : ".edit", action : "keydown", method : $bind(this,this.doneEditing)});
 	this.events.push({ selector : ".edit", action : "blur", method : $bind(this,this.bluredEdit)});
 	this.events.push({ selector : null, action : "dblclick", method : $bind(this,this.edit)});
@@ -1355,6 +1374,12 @@ todo_view_TodoItem.prototype = $extend(scout_View.prototype,{
 	,get_sel: function() {
 		return this.attrs.sel;
 	}
+	,__scout_init: function() {
+		this.initializeVisibility();
+		this.get_todo().props.editing.observe($bind(this,this.toggleEditMode));
+		this.get_store().props.visible.observe($bind(this,this.isVisible));
+		this.get_todo().props.completed.observe($bind(this,this.isVisible));
+	}
 	,__class__: todo_view_TodoItem
 });
 var todo_view_TodoList = function(attrs) {
@@ -1378,9 +1403,7 @@ var todo_view_TodoList = function(attrs) {
 	}
 	__c.setParent(this);
 	this.attrs.body = __c;
-	this.get_store().get_todos().onAdd.add($bind(this,this.addTodo),false);
-	this.get_store().get_todos().onRemove.add($bind(this,this.removeTodo),false);
-	this.get_store().props.todosRemaining.observe($bind(this,this.updateCount));
+	this.__scout_init();
 	this.events.push({ selector : ".filter-all", action : "click", method : $bind(this,this.filterAll)});
 	this.events.push({ selector : ".filter-completed", action : "click", method : $bind(this,this.filterCompleted)});
 	this.events.push({ selector : ".filter-pending", action : "click", method : $bind(this,this.filterPending)});
@@ -1462,6 +1485,11 @@ todo_view_TodoList.prototype = $extend(scout_View.prototype,{
 	}
 	,get_sel: function() {
 		return this.attrs.sel;
+	}
+	,__scout_init: function() {
+		this.get_store().get_todos().onAdd.add($bind(this,this.addTodo),false);
+		this.get_store().get_todos().onRemove.add($bind(this,this.removeTodo),false);
+		this.get_store().props.todosRemaining.observe($bind(this,this.updateCount));
 	}
 	,__class__: todo_view_TodoList
 });

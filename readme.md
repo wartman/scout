@@ -97,9 +97,6 @@ model.observe(model -> trace(model));
 model.props.greeting.observe(greeting -> trace(greeting));
 ```
 
-When using `@:observe` meta you can leave `props` off, like we did in the example
-above, but this will ONLY work on props that belong to the model. 
-
 Collections
 -----------
 

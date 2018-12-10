@@ -16,15 +16,12 @@ class Run {
     // #else
       emu.addListener(new ConsoleNotifier(false));
     // #end
+    emu.addListener(new ExitingNotifier());
     emu.addTest(ModelTest);
     emu.addTest(CollectionTest);
     emu.addTest(ViewTest);
     emu.addTest(TemplateTest);
-    emu.addListener(new ExitingNotifier());
     emu.run();
-    #if travix
-      travix.Logger.exit(0);
-    #end
   }
 
 }

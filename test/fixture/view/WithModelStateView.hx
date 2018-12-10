@@ -7,7 +7,7 @@ class WithModelStateView extends View {
 
   @:state var model:SimpleModel;
 
-  @:observe(model)
+  @:observe(attrs.model)
   function update(_) render();
 
   public function render() 

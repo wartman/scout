@@ -1,3 +1,4 @@
+#if macro
 package scout.macro;
 
 import haxe.macro.Expr;
@@ -81,7 +82,7 @@ class ModelBuilder {
               } else if (meta.params.length > 1) {
                 Context.error('Only one param is allowed here', f.pos);
               }
-              initializers.push(Common.makeObserverForState('props', meta.params[0], macro this.$name));
+              initializers.push(Common.makeObserverForState(meta.params[0], macro this.$name));
             }
           }
           if (f.meta.hasEntry(transitionMetaNames)) {
@@ -197,3 +198,4 @@ class ModelBuilder {
   }
 
 }
+#end

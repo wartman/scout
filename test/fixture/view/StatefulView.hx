@@ -6,7 +6,7 @@ class StatefulView extends View {
 
   @:state var foo:String;
 
-  @:observe(foo)
+  @:observe(attrs.foo)
   function doRender(_) render();
 
   public function render() '${foo}';

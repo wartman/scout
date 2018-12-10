@@ -6,7 +6,7 @@ class SingleStateChildView extends View {
 
   @:state var child:SimpleView;
 
-  @:observe(child)
+  @:observe(attrs.child)
   public function update(_) render();
 
   public function render() 

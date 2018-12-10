@@ -1,3 +1,4 @@
+#if macro
 package scout.macro;
 
 import haxe.macro.Expr;
@@ -38,6 +39,7 @@ class ViewBuilder {
   var constructorFields:Array<Field> = [];
   var attrs:Array<Field> = [];
   var attrInitializers:Array<Expr> = [];
+  var lateInitializers:Array<Expr> = [];
   var initializers:Array<Expr> = [];
   var eventBindings:Array<Expr> = [];
   var isJs:Bool;
@@ -192,9 +194,14 @@ class ViewBuilder {
           this.attrs = cast {};
           $b{attrInitializers};
           __scout_ensureEl();
-          $b{initializers};
+          $b{lateInitializers};
+          __scout_init();
           $b{eventBindings};
           this.delegateEvents(events);
+        }
+
+        function __scout_init() {
+          $b{initializers};
         }
 
       }).fields);
@@ -204,6 +211,11 @@ class ViewBuilder {
         public function new(attrs:$conAttrArgType) {
           this.attrs = cast {};
           $b{attrInitializers};
+          $b{lateInitializers};
+          __scout_init();
+        }
+
+        function __scout_init() {
           $b{initializers};
         }
 
@@ -274,7 +286,7 @@ class ViewBuilder {
             } else if (meta.params.length > 1) {
               Context.error('Only one param is allowed here', f.pos);
             }
-            initializers.push(Common.makeObserverForState('attrs', meta.params[0], macro this.$name));
+            initializers.push(Common.makeObserverForState(meta.params[0], macro this.$name));
           }
         }
 
@@ -302,7 +314,7 @@ class ViewBuilder {
       var init = e == null
         ? macro attrs.$name
         : macro attrs.$name == null ? ${e} : attrs.$name;
-      initializers.push(macro {
+      lateInitializers.push(macro {
         var __c = ${init};
         __c.setParent(this);
         this.attrs.$name = __c;
@@ -329,3 +341,4 @@ class ViewBuilder {
   }
 
 }
+#end

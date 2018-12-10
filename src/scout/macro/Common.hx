@@ -1,3 +1,4 @@
+#if macro
 package scout.macro;
 
 import haxe.macro.Expr;
@@ -7,13 +8,8 @@ using haxe.macro.Tools;
 
 class Common {
 
-  public static function makeObserverForState(propsName:String, prop:Expr, target:Expr) {
-    return switch (prop.expr) {
-      case EConst(CIdent(name)):
-        macro @:pos(prop.pos) this.$propsName.$name.observe(${target});
-      default:
-        macro @:pos(prop.pos) ${prop}.observe(${target}); 
-    }
+  public static function makeObserverForState(prop:Expr, target:Expr) {
+    return macro @:pos(prop.pos) ${prop}.observe(${target}); 
   }
 
   public static function makeProp(name:String, type:ComplexType, pos:Position, hasSetter:Bool = true):Field {
@@ -157,3 +153,4 @@ class Common {
   }
 
 }
+#end

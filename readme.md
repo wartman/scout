@@ -61,8 +61,9 @@ class ExampleModel implements scout.Model {
   // Watch other props and compute a value when they change.
   @:computed(greeting, location) var fullGreeting = greeting + ' ' + location;
 
-  // Observe props for changes.
-  @:observe(greeting)
+  // Observe props for changes. Note that we're observing `props.greeting`,
+  // which points to the underlying `State<String>`.
+  @:observe(props.greeting)
   public function traceGreeting(greeting:String) {
     trace(greeting);
   }
@@ -84,8 +85,8 @@ Every time a property changes in a model, it dispatches an `onChange` signal (un
 it happens in a `@:transition`). `Model` is an `Observable`, so you can track changes
 using its `observe` method.  
 
-Every var marked with `@:prop` is wrapped in a `scout.Property`. You can access these
-properties directly with `Model#props`. Every `scout.Property` is an `Observable` as well,
+Every var marked with `@:prop` is wrapped in a `scout.State<T>`. You can access these
+properties directly with `Model#props`. Every `scout.State<T>` is an `Observable` as well,
 so you can track changes on individual properties this way. For example:
 
 ```haxe
@@ -162,6 +163,9 @@ class ExampleView extends scout.View {
   // so you might want to use `scout.EfficentChildren` (which has a
   // different strategy for adding sub-views) if you're going to be
   // updating the view a lot.
+  //
+  // Note that all Signals, like `collection.onAdd` are `Observable`,
+  // which is why we can use it here.
   @:observe(collection.onAdd)
   function addView(model:ExampleModel) {
     children.add(new ExampleModelView({
@@ -179,6 +183,18 @@ class ExampleView extends scout.View {
   function doAddView(e) {
     e.preventDefault();
     addView(new ExampleModel({ greeting: 'Hey', location: 'this view' }));
+  }
+
+  // All views have several lifecycle signals that you can hook into. The
+  // main ones are `beforeRender`, `afterRender` and `onRemove`, which do what you think.
+  @:observe(beforeRender)
+  function logWhenRender(_) {
+    trace('before rendering');
+  }
+
+  @:observe(afterRender)
+  function logWhenDoneRendering(_) {
+    trace('after rendering');
   }
 
   // Rendering is done in the `render` method, which will automaically

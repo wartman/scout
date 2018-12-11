@@ -1,3 +1,4 @@
+#if macro
 package scout.macro;
 
 import haxe.macro.Expr;
@@ -64,3 +65,4 @@ class TemplateBuilder {
   }
 
 }
+#end

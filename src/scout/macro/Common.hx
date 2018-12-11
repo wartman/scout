@@ -62,7 +62,7 @@ class Common {
     return makeSetter(
       name,
       ret,
-      macro {
+      macro @:pos(pos) {
         this.$propsName.$name = value;
         return value;
       },
@@ -76,7 +76,7 @@ class Common {
       kind: FFun({
         ret: ret,
         args: [],
-        expr: macro return this.$propsName.$name.get()
+        expr: macro @:pos(pos) return this.$propsName.$name.get()
       }),
       meta: [ { name: ':keep', pos: pos } ],
       access: [ APublic ],
@@ -90,7 +90,7 @@ class Common {
       kind: FFun({
         ret: ret,
         args: [ { name: 'value', type: ret } ],
-        expr: macro {
+        expr: macro @:pos(pos) {
           this.$propsName.$name.set(value);
           return value;
         }

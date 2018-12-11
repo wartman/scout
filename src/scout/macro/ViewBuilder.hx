@@ -15,7 +15,6 @@ class ViewBuilder {
   static final elMetaNames = [ ':el', ':element' ];
   static final compMetaNames = [ ':comp', ':computed' ];
   static final observeMetaNames = [ ':observe' ];
-  static var childType = Context.getType('scout.Child');
   static var processed:Array<ClassType> = [];
 
   public static function buildJs() {
@@ -256,7 +255,7 @@ class ViewBuilder {
         
         if (f.meta.hasEntry([ ':init' ])) {
           var name = f.name;
-          initializers.push(macro this.$name());
+          initializers.push(macro @:pos(f.pos) this.$name());
         }
 
         if (f.meta.hasEntry([ ':on' ])) {
@@ -269,7 +268,7 @@ class ViewBuilder {
             var type = meta.params[0];
             var target = meta.params[1];
             if (target == null) target = macro null;
-            eventBindings.push(macro this.events.push({ 
+            eventBindings.push(macro @:pos(f.pos) this.events.push({ 
               selector: ${target},
               action: ${type},
               method: this.$name 
@@ -286,7 +285,7 @@ class ViewBuilder {
             } else if (meta.params.length > 1) {
               Context.error('Only one param is allowed here', f.pos);
             }
-            initializers.push(Common.makeObserverForState(meta.params[0], macro this.$name));
+            initializers.push(Common.makeObserverForState(meta.params[0], macro @:pos(f.pos) this.$name));
           }
         }
 
@@ -306,6 +305,7 @@ class ViewBuilder {
 
   function makeFieldsForAttr(f:Field, t:ComplexType, ?e:Expr):Array<Field> {
     var isOptional = f.meta.hasEntry([ ':optional' ]) || e != null;
+    var childType = Context.getType('scout.Child');
     constructorFields.push(Common.makeConstructorField(f.name, t, f.pos, isOptional));
     attrs.push(Common.makeValue(f.name, t, f.pos));
     

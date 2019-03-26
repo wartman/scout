@@ -316,6 +316,7 @@ class ViewBuilder {
         : macro attrs.$name == null ? ${e} : attrs.$name;
       lateInitializers.push(macro {
         var __c = ${init};
+        if (__c == null) __c = cast new scout.NullChild();
         __c.setParent(this);
         this.attrs.$name = __c;
       });

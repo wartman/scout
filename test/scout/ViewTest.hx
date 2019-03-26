@@ -48,6 +48,13 @@ class ViewTest {
   }
 
   @Test
+  public function testOptionalChild() {
+    var bar = new OptionalChildView({});
+    var expected = '<div><div class="content"></div></div>';
+    bar.render().content.equals(expected);
+  }
+
+  @Test
   public function testChildren() {
     var bar = new ChildrenView({
       body: [ 
